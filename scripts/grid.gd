@@ -1,7 +1,7 @@
 extends Node
 
 enum TagTypes {
-	SOLID, LOCKED, PASSABLE, PUSHABLE, FRAGILE, HEAVY, LIGHT
+	IMPASSABLE, LOCKED, PASSABLE, PUSHABLE, FRAGILE, HEAVY, LIGHT
 }
 
 const TILE_SIZE := 16
@@ -25,8 +25,9 @@ func register_region(region: Node2D) -> void:
 func unregister_region(region: Node2D) -> void:
 	regions.erase(region)
 
-func get_region_at(pos: Vector2i) -> Node2D:
-	for region in regions:
+func get_region_at(pos: Vector2i, _check_tags: bool = false) -> Node2D:
+	for i in range(regions.size() - 1, -1, -1):
+		var region = regions[i]
 		if region.get_grid_rect().has_point(pos):
 			return region
 	return null
@@ -97,6 +98,15 @@ func refresh_all_tags() -> void:
 	wall_tags.clear()
 	layer_tags.clear()
 
+	# 1. Base Layer Tags
+	for layer in GameState.solid_tilemaps:
+		if is_instance_valid(layer) and layer.get("tags") != null:
+			var cells = layer.get_used_cells()
+			for pos in cells:
+				for tag in layer.tags:
+					add_layer_tag(pos, layer.name, tag)
+
+	# 2. Region Overrides (Isolation)
 	for region in regions:
 		if is_instance_valid(region):
 			var rect = region.get_grid_rect()
@@ -104,6 +114,8 @@ func refresh_all_tags() -> void:
 			for x in range(rect.size.x):
 				for y in range(rect.size.y):
 					var pos = rect.position + Vector2i(x, y)
+					# Clear global layer tags for this cell so Region tags completely override them
+					clear_layer_tags(pos, layer)
 					for tag in region.tags:
 						add_layer_tag(pos, layer, tag)
 
@@ -140,6 +152,24 @@ func _try_convert_to_node(pos: Vector2i) -> void:
 				layer.set_cell(pos, -1)
 				wall_tags.erase(pos)
 				return
+
+func isolate_tile_as_region(pos: Vector2i, layer_name: String) -> SubtextRegion:
+	var existing = get_region_at(pos)
+	if existing: return existing
+	
+	var region = SubtextRegion.new()
+	region.target_layer_name = layer_name
+	region.tag_rect = Rect2i(0, 0, 1, 1)
+	region.highlight_rect = Rect2i(0, 0, 1, 1)
+	region.position = grid_to_world(pos)
+	
+	if layer_tags.has(pos) and layer_tags[pos].has(layer_name):
+		var t_list = layer_tags[pos][layer_name]
+		for t in t_list:
+			region.tags.append(t)
+	
+	get_tree().current_scene.add_child(region)
+	return region
 
 func remove_wall_tag(pos: Vector2i, tag: String) -> void:
 	var t: Array = wall_tags.get(pos, [])

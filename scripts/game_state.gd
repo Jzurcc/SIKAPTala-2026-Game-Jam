@@ -152,24 +152,17 @@ func is_wall_at(pos: Vector2i) -> bool:
 
 
 func is_tile_blocked(pos: Vector2i) -> bool:
-	if Grid.layer_tags.has(pos) and Grid.layer_tags[pos].has("SubtextRegion"):
-		var tags = Grid.layer_tags[pos]["SubtextRegion"]
-		if "SOLID" in tags: return true
-		if "PASSABLE" in tags: return false
-
 	for i in range(solid_tilemaps.size() - 1, -1, -1):
 		var layer = solid_tilemaps[i]
 		if layer.get_cell_source_id(pos) != -1:
+			var is_passable = false
 			if Grid.layer_tags.has(pos) and Grid.layer_tags[pos].has(layer.name):
 				var tags = Grid.layer_tags[pos][layer.name]
-
-				if "SOLID" in tags: return true
-
-				if "PASSABLE" in tags: return false
-
-
-			continue
-
+				if "PASSABLE" in tags: is_passable = true
+				elif "IMPASSABLE" in tags: return true
+			
+			if not is_passable and layer.name.to_lower().contains("wall"):
+				return true
 	return false
 
 

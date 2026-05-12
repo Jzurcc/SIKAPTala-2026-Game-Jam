@@ -1,6 +1,6 @@
 extends TileMapLayer
 
-var tags: Array[String] = ["SOLID", "LOCKED"]
+var tags: Array[String] = ["IMPASSABLE", "LOCKED"]
 
 func _ready() -> void:
 	print("[LockedWalls] _ready() starting on node: ", name)

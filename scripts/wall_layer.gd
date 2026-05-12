@@ -1,6 +1,6 @@
 extends TileMapLayer
 
-@export var initial_tags: Array[Grid.TagTypes] = [Grid.TagTypes.SOLID]
+@export var initial_tags: Array[Grid.TagTypes] = [Grid.TagTypes.IMPASSABLE]
 var tags: Array[String] = []
 
 func _ready() -> void:
