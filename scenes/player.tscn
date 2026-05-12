@@ -411,7 +411,7 @@ script = ExtResource("1_dqkch")
 
 [node name="PlayerSprite" type="AnimatedSprite2D" parent="." unique_id=834552239]
 sprite_frames = SubResource("SpriteFrames_coh8c")
-animation = &"Walk"
+animation = &"Idle"
 
 [node name="HairSprite" type="AnimatedSprite2D" parent="." unique_id=1056578855]
 sprite_frames = SubResource("SpriteFrames_g3arh")
