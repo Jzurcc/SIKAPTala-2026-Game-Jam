@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bx0gxjlpmtjvi"
-path="res://.godot/imported/roguelikeSheet_transparent.png-6aeaea1e6e45ce3ccbaabcdfcec3929a.ctex"
+uid="uid://scilfdppaqu1"
+path="res://.godot/imported/tools_doing_strip8.png-5aeaca38156b740852f471a3b487efb7.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/roguelikeSheet_transparent.png"
-dest_files=["res://.godot/imported/roguelikeSheet_transparent.png-6aeaea1e6e45ce3ccbaabcdfcec3929a.ctex"]
+source_file="res://assets/sprites/World/Characters/Human/DOING/tools_doing_strip8.png"
+dest_files=["res://.godot/imported/tools_doing_strip8.png-5aeaca38156b740852f471a3b487efb7.ctex"]
 
 [params]
 
