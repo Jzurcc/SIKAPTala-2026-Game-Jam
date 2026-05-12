@@ -2,7 +2,7 @@
 
 [ext_resource type="FontFile" uid="uid://clrw31hbcwimm" path="res://assets/sprites/World/Fonts/light_pixel-7.ttf" id="1_ftitle"]
 [ext_resource type="FontFile" uid="uid://deljmbv1ijlmk" path="res://assets/sprites/World/Fonts/Kenney Mini.ttf" id="2_fopt"]
-[ext_resource type="Script" uid="uid://bpst26haeanf6" path="res://scripts/title_screen.gd" id="3_scr"]
+[ext_resource type="Script" path="res://scripts/title_screen.gd" id="3_scr"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_title"]
 font = ExtResource("1_ftitle")

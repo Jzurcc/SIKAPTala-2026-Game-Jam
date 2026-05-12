@@ -12,6 +12,8 @@ var is_dead: bool = false
 var is_moving: bool = false
 var _move_tween: Tween = null
 
+var _held_dirs: Array[Vector2i] = []
+
 
 func _ready() -> void:
 	grid_pos = Grid.world_to_grid(position)
@@ -22,6 +24,12 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# Always track the priority order of held movement keys
+	_handle_dir_stack(event, "move_left", Vector2i(-1, 0))
+	_handle_dir_stack(event, "move_right", Vector2i(1, 0))
+	_handle_dir_stack(event, "move_forward", Vector2i(0, -1))
+	_handle_dir_stack(event, "move_back", Vector2i(0, 1))
+
 	if is_dead:
 		return
 
@@ -43,21 +51,26 @@ func _unhandled_input(event: InputEvent) -> void:
 	if GameState.is_substrate:
 		return
 
-	var dir := Vector2i.ZERO
-	if event.is_action_pressed("move_left"):
-		dir = Vector2i(-1, 0)
-	elif event.is_action_pressed("move_right"):
-		dir = Vector2i(1, 0)
-	elif event.is_action_pressed("move_forward"):
-		dir = Vector2i(0, -1)
-	elif event.is_action_pressed("move_back"):
-		dir = Vector2i(0, 1)
+	var is_move_event = event.is_action("move_left") or event.is_action("move_right") or event.is_action("move_forward") or event.is_action("move_back")
+	if not is_move_event:
+		return
 
+	if event.is_echo():
+		return
+
+	var dir := _get_held_dir()
 	if dir == Vector2i.ZERO:
 		return
 
 	get_viewport().set_input_as_handled()
 	_attempt_move(dir)
+
+func _handle_dir_stack(event: InputEvent, action: String, dir: Vector2i) -> void:
+	if event.is_action_pressed(action):
+		if not _held_dirs.has(dir):
+			_held_dirs.append(dir)
+	elif event.is_action_released(action):
+		_held_dirs.erase(dir)
 
 
 func _attempt_move(dir: Vector2i) -> void:
@@ -123,14 +136,19 @@ func _on_move_finished() -> void:
 
 
 func _get_held_dir() -> Vector2i:
-	if Input.is_action_pressed("move_left"):
-		return Vector2i(-1, 0)
-	if Input.is_action_pressed("move_right"):
-		return Vector2i(1, 0)
-	if Input.is_action_pressed("move_forward"):
-		return Vector2i(0, -1)
-	if Input.is_action_pressed("move_back"):
-		return Vector2i(0, 1)
+	for i in range(_held_dirs.size() - 1, -1, -1):
+		var dir = _held_dirs[i]
+		var action = ""
+		if dir == Vector2i(-1, 0): action = "move_left"
+		elif dir == Vector2i(1, 0): action = "move_right"
+		elif dir == Vector2i(0, -1): action = "move_forward"
+		elif dir == Vector2i(0, 1): action = "move_back"
+		
+		# Fallback check against global input state in case we missed a release event
+		if Input.is_action_pressed(action):
+			return dir
+		else:
+			_held_dirs.remove_at(i)
 	return Vector2i.ZERO
 
 

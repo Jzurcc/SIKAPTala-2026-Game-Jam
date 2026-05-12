@@ -163,6 +163,6 @@ func _update_sel() -> void:
 func _confirm() -> void:
 	match selected:
 		0:
-			get_tree().change_scene_to_file("res://scenes/node_2d.tscn")
+			get_tree().change_scene_to_file("res://scenes/game_scene.tscn")
 		1:
 			get_tree().quit()
