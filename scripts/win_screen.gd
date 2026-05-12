@@ -18,7 +18,6 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	timer += delta
-	# pingpong creates a linear, constant-speed wave that doesn't "rest" or ease at the peaks
 	you_win_label.position.y = base_y - 1.5 + pingpong(timer * 4.0, 3.0)
 
 

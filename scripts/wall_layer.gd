@@ -1,6 +1,5 @@
 extends TileMapLayer
 
-## Basic wall layer script that registers collision and adds the [SOLID] tag to all tiles.
 func _ready() -> void:
 	GameState.register_tilemap(self)
 	

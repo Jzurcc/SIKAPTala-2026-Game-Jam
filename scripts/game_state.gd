@@ -9,10 +9,77 @@ signal level_won
 var is_substrate: bool = false
 var undo_stack: Array[Dictionary] = []
 
+var bgm_player: AudioStreamPlayer
+var bgm_playlist: Array[String] = [
+	"res://assets/music/bgm/punky-troll-oxcc-5-u.wav",
+	"res://assets/music/bgm/ooh-a-fly-wait-it-isn-t-tloagd.wav",
+	"res://assets/music/bgm/welcome-space-traveler-4-wct-1-b.wav"
+]
+var bgm_index: int = 0
+var lpf_tween: Tween
+
+var transition_layer: CanvasLayer
+var transition_rect: ColorRect
+
 var player_ref: Node2D = null
 var entities: Array[Node2D] = []
 var world_objects: Array[Node2D] = []
 var solid_tilemaps: Array[TileMapLayer] = []
+
+
+func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	
+	transition_layer = CanvasLayer.new()
+	transition_layer.layer = 128
+	add_child(transition_layer)
+	
+	transition_rect = ColorRect.new()
+	transition_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	transition_rect.color = Color(0, 0, 0, 0)
+	transition_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	transition_layer.add_child(transition_rect)
+	
+	bgm_player = AudioStreamPlayer.new()
+	bgm_player.bus = "BGM"
+	add_child(bgm_player)
+	bgm_player.finished.connect(_on_bgm_finished)
+
+
+func start_gameplay_music() -> void:
+	if bgm_player.playing:
+		return
+	bgm_index = 0
+	_play_current_bgm()
+
+
+func transition_to_scene(path: String, start_bgm: bool = false) -> void:
+	var tw = create_tween()
+	tw.tween_property(transition_rect, "color:a", 1.0, 0.8)
+	await tw.finished
+	
+	get_tree().change_scene_to_file(path)
+	await get_tree().create_timer(2.0).timeout 
+	
+	if start_bgm:
+		start_gameplay_music()
+		
+	tw = create_tween()
+	tw.tween_property(transition_rect, "color:a", 0.0, 0.8)
+
+
+func _play_current_bgm() -> void:
+	var stream = load(bgm_playlist[bgm_index])
+	if stream is AudioStreamWAV:
+		stream.loop_mode = AudioStreamWAV.LOOP_DISABLED
+	bgm_player.stream = stream
+	bgm_player.play()
+
+
+func _on_bgm_finished() -> void:
+	bgm_index = (bgm_index + 1) % bgm_playlist.size()
+	await get_tree().create_timer(randf_range(2.0, 3.0)).timeout
+	_play_current_bgm()
 
 
 func register_player(p: Node2D) -> void:
@@ -50,9 +117,20 @@ func reset() -> void:
 
 func toggle_substrate() -> void:
 	is_substrate = !is_substrate
-	# Pause the entire game world when in Subtext View
 	get_tree().paused = is_substrate
 	substrate_toggled.emit(is_substrate)
+	
+	if lpf_tween:
+		lpf_tween.kill()
+		
+	var bus_idx = AudioServer.get_bus_index("BGM")
+	if bus_idx != -1 and AudioServer.get_bus_effect_count(bus_idx) > 0:
+		var effect = AudioServer.get_bus_effect(bus_idx, 0)
+		if effect is AudioEffectLowPassFilter:
+			lpf_tween = create_tween()
+			lpf_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+			var target_hz = 600.0 if is_substrate else 20000.0
+			lpf_tween.tween_property(effect, "cutoff_hz", target_hz, 0.25).set_trans(Tween.TRANS_SINE)
 
 
 func is_wall_at(pos: Vector2i) -> bool:

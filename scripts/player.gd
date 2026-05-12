@@ -116,15 +116,12 @@ func _step_to(new_pos: Vector2i, dir: Vector2i) -> void:
 	is_moving = true
 	_move_tween = create_tween()
 	
-	# Detect if this is the last tile (no keys held)
 	var is_last_tile = (_get_held_dir() == Vector2i.ZERO)
 	
 	if is_last_tile:
-		# Add a nice overshoot/bounce back effect for stopping
 		_move_tween.set_trans(Tween.TRANS_BACK)
 		_move_tween.set_ease(Tween.EASE_OUT)
 	else:
-		# Smooth transition for continuous walking
 		_move_tween.set_trans(Tween.TRANS_SINE)
 		_move_tween.set_ease(Tween.EASE_IN_OUT)
 		
@@ -152,7 +149,6 @@ func _get_held_dir() -> Vector2i:
 		elif dir == Vector2i(0, -1): action = "move_forward"
 		elif dir == Vector2i(0, 1): action = "move_back"
 		
-		# Fallback check against global input state in case we missed a release event
 		if Input.is_action_pressed(action):
 			return dir
 		else:

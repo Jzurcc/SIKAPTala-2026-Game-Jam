@@ -20,7 +20,7 @@ func _ready() -> void:
 	
 	container.custom_minimum_size = Vector2(200, 16) 
 	container.position = -Vector2(100, 8) 
-	container.pivot_offset = Vector2(100, 8) # Scale from center
+	container.pivot_offset = Vector2(100, 8)
 	
 	container.add_theme_constant_override("separation", 2)
 	add_child(container)
@@ -61,7 +61,6 @@ func setup(tags: Array) -> void:
 		
 		container.add_child(label)
 		
-		# Set pivot for centered scaling
 		await get_tree().process_frame
 		if is_instance_valid(label):
 			label.pivot_offset = label.size / 2.0

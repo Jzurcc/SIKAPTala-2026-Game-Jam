@@ -13,19 +13,16 @@ var is_selected: bool = false
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	
-	# Container for highlights (Under shader)
 	highlight_container = CanvasLayer.new()
 	highlight_container.layer = 99
 	highlight_container.follow_viewport_enabled = true
 	add_child(highlight_container)
 	
-	# Container for labels (Above shader)
 	label_container = CanvasLayer.new()
 	label_container.layer = 101
 	label_container.follow_viewport_enabled = true
 	add_child(label_container)
 	
-	# Create a sprite to "clone" the hovered tile for pixel-perfect modulation
 	tile_highlight_sprite = Sprite2D.new()
 	tile_highlight_sprite.centered = true
 	tile_highlight_sprite.region_enabled = true
@@ -41,7 +38,7 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	if not GameState.is_substrate: return
 	
-	if event.is_action_pressed("ui_cancel"): # ESC
+	if event.is_action_pressed("ui_cancel"):
 		_deselect()
 		return
 
@@ -49,12 +46,10 @@ func _input(event: InputEvent) -> void:
 		var mouse_pos = get_tree().current_scene.get_global_mouse_position()
 		
 		if is_selected:
-			# Check if clicking outside labels
 			var dist = mouse_pos.distance_to(hover_label.global_position)
-			if dist > 30.0: # Distance threshold for "outside"
+			if dist > 30.0:
 				_deselect()
 		else:
-			# Check if clicking on content to select
 			var grid_pos = Grid.world_to_grid(mouse_pos)
 			var tags = Grid.get_wall_tags(grid_pos)
 			var occupant = Grid.get_occupant(grid_pos)
@@ -82,7 +77,7 @@ func _process(_delta: float) -> void:
 		return
 	
 	if is_selected:
-		return # Don't update hover while selected
+		return
 		
 	var scene = get_tree().current_scene
 	if not scene: return
@@ -90,11 +85,9 @@ func _process(_delta: float) -> void:
 	var mouse_pos = scene.get_global_mouse_position()
 	var grid_pos = Grid.world_to_grid(mouse_pos)
 	
-	# 1. Check for walls/objects at grid position
 	var tags = Grid.get_wall_tags(grid_pos)
 	var occupant = Grid.get_occupant(grid_pos)
 	
-	# 2. Highlight handling
 	var has_content = not tags.is_empty() or (occupant and occupant != GameState.player_ref)
 	
 	if has_content:
@@ -111,7 +104,6 @@ func _process(_delta: float) -> void:
 		tile_highlight_sprite.visible = false
 		_clear_highlight()
 
-	# 3. Tag Logic
 	if not tags.is_empty():
 		if tags != current_tags:
 			current_tags = tags
@@ -125,7 +117,6 @@ func _process(_delta: float) -> void:
 			current_tags = []
 
 func _highlight_tile(pos: Vector2i) -> void:
-	# Find which layer has the tile at this position
 	for layer in GameState.solid_tilemaps:
 		var source_id = layer.get_cell_source_id(pos)
 		if source_id != -1:

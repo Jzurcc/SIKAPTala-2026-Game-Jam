@@ -6,7 +6,7 @@ var tween: Tween
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	layer = 100 # Draw on top of the entire game
+	layer = 100
 	
 	color_rect = ColorRect.new()
 	color_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -17,10 +17,10 @@ func _ready() -> void:
 		shader_mat = ShaderMaterial.new()
 		shader_mat.shader = shader
 		shader_mat.set_shader_parameter("radius", 0.0) 
-		shader_mat.set_shader_parameter("global_alpha", 0.3) # Much more transparent
+		shader_mat.set_shader_parameter("global_alpha", 0.3)
 		color_rect.material = shader_mat
 	
-	color_rect.modulate.a = 0.75 # Make it semi-transparent so we can see objects
+	color_rect.modulate.a = 0.75
 	add_child(color_rect)
 	
 	GameState.substrate_toggled.connect(_on_substrate_toggled)
@@ -39,12 +39,10 @@ func _on_substrate_toggled(active: bool) -> void:
 		
 	tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	
-	# Calculate screen aspect ratio to keep the circle perfectly round
 	var screen_size = get_viewport().get_visible_rect().size
 	var aspect = screen_size.x / max(screen_size.y, 1.0)
 	shader_mat.set_shader_parameter("aspect_ratio_expansion", aspect)
 	
-	# Calculate player screen UV (0.0 to 1.0)
 	var center_uv = Vector2(0.5, 0.5)
 	if GameState.player_ref:
 		var screen_pos = GameState.player_ref.get_global_transform_with_canvas().origin
@@ -52,7 +50,6 @@ func _on_substrate_toggled(active: bool) -> void:
 		
 	shader_mat.set_shader_parameter("center", center_uv)
 	
-	# Animate the radius (2.0 is big enough to cover the corners of wide aspect ratios)
 	if active:
 		tween.tween_property(shader_mat, "shader_parameter/radius", 2.0, 0.4)
 	else:

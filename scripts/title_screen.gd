@@ -37,6 +37,7 @@ var glitch_timer: float = 0.0
 var next_glitch_time: float = 2.0
 var glitch_bursts_remaining: int = 0
 var shake: float = 0.0
+var bgm_player: AudioStreamPlayer
 
 
 func _ready() -> void:
@@ -67,6 +68,13 @@ func _ready() -> void:
 		glitch_overlay.material = glitch_mat
 	
 	next_glitch_time = randf_range(2.0, 5.0)
+	
+	bgm_player = AudioStreamPlayer.new()
+	bgm_player.stream = load("res://assets/music/bgm/a-lonely-cherry-tree-bo-2-dny.wav")
+	bgm_player.autoplay = true
+	add_child(bgm_player)
+	bgm_player.finished.connect(bgm_player.play)
+	
 	_update_title_text()
 
 
@@ -225,6 +233,10 @@ func _update_sel() -> void:
 func _confirm() -> void:
 	match selected:
 		0:
-			get_tree().change_scene_to_file("res://scenes/game_scene.tscn")
+			can_input = false
+			if bgm_player:
+				var fade_tw = create_tween()
+				fade_tw.tween_property(bgm_player, "volume_db", -80.0, 0.8)
+			GameState.transition_to_scene("res://scenes/game_scene.tscn", true)
 		1:
 			get_tree().quit()
