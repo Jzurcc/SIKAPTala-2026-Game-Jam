@@ -84,6 +84,8 @@ func _on_bgm_finished() -> void:
 
 func register_player(p: Node2D) -> void:
 	player_ref = p
+	if player_ref:
+		player_ref.z_index = 100
 
 
 func register_entity(e: Node2D) -> void:
@@ -100,10 +102,19 @@ func register_object(o: Node2D) -> void:
 		world_objects.append(o)
 
 
-func register_tilemap(t: TileMapLayer) -> void:
-	if not t in solid_tilemaps:
-		solid_tilemaps.append(t)
+func refresh_tilemaps() -> void:
+	solid_tilemaps.clear()
+	var root = get_tree().current_scene
+	if root:
+		_find_tilemaps_recursive(root)
 
+func _find_tilemaps_recursive(node: Node) -> void:
+	if node is TileMapLayer:
+		if not node in solid_tilemaps:
+			node.z_index = solid_tilemaps.size() * 10
+			solid_tilemaps.append(node)
+	for child in node.get_children():
+		_find_tilemaps_recursive(child)
 
 func reset() -> void:
 	entities.clear()
@@ -141,9 +152,24 @@ func is_wall_at(pos: Vector2i) -> bool:
 
 
 func is_tile_blocked(pos: Vector2i) -> bool:
-	var wt := Grid.get_wall_tags(pos)
-	if is_wall_at(pos) and not "PASSABLE" in wt:
-		return true
+	if Grid.layer_tags.has(pos) and Grid.layer_tags[pos].has("SubtextRegion"):
+		var tags = Grid.layer_tags[pos]["SubtextRegion"]
+		if "SOLID" in tags: return true
+		if "PASSABLE" in tags: return false
+
+	for i in range(solid_tilemaps.size() - 1, -1, -1):
+		var layer = solid_tilemaps[i]
+		if layer.get_cell_source_id(pos) != -1:
+			if Grid.layer_tags.has(pos) and Grid.layer_tags[pos].has(layer.name):
+				var tags = Grid.layer_tags[pos][layer.name]
+
+				if "SOLID" in tags: return true
+
+				if "PASSABLE" in tags: return false
+
+
+			continue
+
 	return false
 
 

@@ -12,7 +12,7 @@ var phase: Phase = Phase.STATIC
 var timer: float = 0.0
 
 const WORD := "SUBTEXT"
-const GLYPHS := "0101010101<>|_/\\" 
+const GLYPHS := "0101010101<>|_/\\"
 
 
 var display_chars: Array[String] = ["", "", "", "", "", "", ""]
@@ -46,27 +46,27 @@ func _ready() -> void:
 	exit_label.modulate.a = 0.0
 	title_red.modulate = Color(1.0, 0.4, 0.4, 0.0)
 	title_blue.modulate = Color(0.4, 0.4, 1.0, 0.0)
-	
+
 	for i in range(7):
 		display_chars[i] = _rand_char()
 		char_cycle_timers[i] = randf_range(0, 0.08)
-	
+
 	var canvas_layer = CanvasLayer.new()
 	canvas_layer.layer = 100
 	add_child(canvas_layer)
-	
+
 	glitch_overlay = ColorRect.new()
 	glitch_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	glitch_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	canvas_layer.add_child(glitch_overlay)
-	
+
 	var shader = load("res://assets/shaders/subtext2.gdshader")
 	if shader:
 		glitch_mat = ShaderMaterial.new()
 		glitch_mat.shader = shader
 		glitch_mat.set_shader_parameter("radius", 0.0)
 		glitch_overlay.material = glitch_mat
-	
+
 	next_glitch_time = randf_range(2.0, 5.0)
 	
 	bgm_player = AudioStreamPlayer.new()
@@ -80,7 +80,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	timer += delta
-	
+
 	if shake > 0.0:
 		self.position = Vector2(
 			randf_range(-shake, shake),
@@ -97,36 +97,36 @@ func _process(delta: float) -> void:
 				phase = Phase.CORRECTION
 				timer = 0.0
 				next_lock_time = 0.12
-		
+
 		Phase.CORRECTION:
 			_process_char_cycles(delta)
 			if lock_idx < lock_order.size() and timer >= next_lock_time:
 				_lock_next_character()
 				next_lock_time = timer + 0.12
-			
+
 			if lock_idx >= lock_order.size() and timer >= next_lock_time:
 				phase = Phase.REVEAL
 				timer = 0.0
-		
+
 		Phase.REVEAL:
 			_do_reveal()
-		
+
 		Phase.SETTLE:
 			_do_settle()
-			
+
 	if glitch_mat:
 		glitch_timer += delta
 		if glitch_timer >= next_glitch_time:
 			_trigger_glitch()
 			glitch_timer = 0.0
-			
+
 			if glitch_bursts_remaining > 0:
 				next_glitch_time = randf_range(0.1, 0.3)
 				glitch_bursts_remaining -= 1
 			else:
 				if randf() < 0.35:
 					glitch_bursts_remaining = randi_range(1, 2)
-					
+
 				if randf() < 0.25:
 					next_glitch_time = randf_range(0.4, 1.5)
 				else:
@@ -139,15 +139,15 @@ func _rand_char() -> String:
 
 func _process_char_cycles(delta: float) -> void:
 	for i in range(7):
-		if locked[i]: 
+		if locked[i]:
 			display_chars[i] = WORD[i]
 			continue
-			
+
 		char_cycle_timers[i] += delta
 		if char_cycle_timers[i] >= char_intervals[i]:
 			char_cycle_timers[i] = 0.0
 			display_chars[i] = _rand_char()
-	
+
 	_update_title_text()
 
 
@@ -156,7 +156,7 @@ func _lock_next_character() -> void:
 	locked[idx_to_lock] = true
 	display_chars[idx_to_lock] = WORD[idx_to_lock]
 	lock_idx += 1
-	
+
 	_ghost_flash()
 	_update_title_text()
 
@@ -169,7 +169,7 @@ func _do_reveal() -> void:
 	var p: float = sin(timer * PI / 0.8)
 	var pulse: float = 1.0 + 0.4 * p
 	title.modulate = Color(pulse, pulse, pulse, 1.0)
-	
+
 	title_red.modulate.a = 0.15 * p
 	title_blue.modulate.a = 0.15 * p
 
@@ -182,7 +182,7 @@ func _do_reveal() -> void:
 		var tw := create_tween()
 		tw.set_trans(Tween.TRANS_SINE)
 		tw.set_ease(Tween.EASE_IN_OUT)
-		tw.tween_property(start_label, "modulate:a", 1.0, 0.7) 
+		tw.tween_property(start_label, "modulate:a", 1.0, 0.7)
 		tw.parallel().tween_property(exit_label, "modulate:a", 0.5, 0.7)
 		tw.tween_callback(func(): can_input = true)
 

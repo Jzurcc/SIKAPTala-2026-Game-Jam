@@ -4,7 +4,7 @@ extends Node2D
 @onready var anim_hair: AnimatedSprite2D = $HairSprite
 @onready var anim_tool: AnimatedSprite2D = $ToolSprite
 
-const MOVE_DURATION := 0.28 
+const MOVE_DURATION := 0.18
 
 var grid_pos: Vector2i = Vector2i.ZERO
 var tags: Array[String] = []
@@ -21,6 +21,7 @@ func _ready() -> void:
 	Grid.occupy(grid_pos, self)
 	GameState.register_player(self)
 	_play_anim("Idle")
+	GameState.call_deferred("refresh_tilemaps")
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -74,6 +75,7 @@ func _attempt_move(dir: Vector2i) -> void:
 	var target := grid_pos + dir
 
 	if GameState.is_tile_blocked(target):
+		_play_anim("Idle")
 		return
 
 	var occupant: Node2D = Grid.get_occupant(target)
@@ -115,16 +117,9 @@ func _step_to(new_pos: Vector2i, dir: Vector2i) -> void:
 
 	is_moving = true
 	_move_tween = create_tween()
-	
-	var is_last_tile = (_get_held_dir() == Vector2i.ZERO)
-	
-	if is_last_tile:
-		_move_tween.set_trans(Tween.TRANS_BACK)
-		_move_tween.set_ease(Tween.EASE_OUT)
-	else:
-		_move_tween.set_trans(Tween.TRANS_SINE)
-		_move_tween.set_ease(Tween.EASE_IN_OUT)
-		
+	_move_tween.set_trans(Tween.TRANS_EXPO)
+	_move_tween.set_ease(Tween.EASE_OUT)
+
 	_move_tween.tween_property(anim_player, "position", Vector2.ZERO, MOVE_DURATION)
 	_move_tween.parallel().tween_property(anim_hair, "position", Vector2.ZERO, MOVE_DURATION)
 	_move_tween.parallel().tween_property(anim_tool, "position", Vector2.ZERO, MOVE_DURATION)
@@ -148,7 +143,7 @@ func _get_held_dir() -> Vector2i:
 		elif dir == Vector2i(1, 0): action = "move_right"
 		elif dir == Vector2i(0, -1): action = "move_forward"
 		elif dir == Vector2i(0, 1): action = "move_back"
-		
+
 		if Input.is_action_pressed(action):
 			return dir
 		else:
