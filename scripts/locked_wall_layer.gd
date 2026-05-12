@@ -1,14 +1,20 @@
 extends TileMapLayer
 
+var tags: Array[String] = ["SOLID", "LOCKED"]
+
 func _ready() -> void:
 	print("[LockedWalls] _ready() starting on node: ", name)
-	
 	var cells = get_used_cells()
-	print("[LockedWalls] get_used_cells() returned: ", cells.size())
-	
-	# Automatically adds tags to every tile on this specific layer
 	for pos in cells:
-		Grid.add_layer_tag(pos, name, "SOLID")
-		Grid.add_layer_tag(pos, name, "LOCKED")
-	
-	print("[LockedWalls] Finished tagging. Grid.wall_tags count now: ", Grid.wall_tags.size())
+		for tag in tags:
+			Grid.add_layer_tag(pos, name, tag)
+
+func update_tags(new_tags: Array[String]) -> void:
+	var cells = get_used_cells()
+	for pos in cells:
+		Grid.clear_layer_tags(pos, name)
+	tags = new_tags
+	for pos in cells:
+		for tag in tags:
+			Grid.add_layer_tag(pos, name, tag)
+	Grid.refresh_all_tags()

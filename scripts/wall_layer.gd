@@ -1,18 +1,27 @@
 extends TileMapLayer
 
-enum TagTypes {
-	SOLID, LOCKED, PASSABLE, PUSHABLE, FRAGILE, HEAVY, LIGHT
-}
+@export var initial_tags: Array[Grid.TagTypes] = [Grid.TagTypes.SOLID]
+var tags: Array[String] = []
 
-@export var initial_tags: Array[TagTypes] = [TagTypes.SOLID]
-
-## Basic wall layer script that registers collision and adds tags to all tiles.
 func _ready() -> void:
-	var string_tags = []
 	for t in initial_tags:
-		string_tags.append(TagTypes.keys()[t])
-		
+		tags.append(Grid.TagTypes.keys()[t])
+
 	var cells = get_used_cells()
 	for pos in cells:
-		for tag in string_tags:
+		for tag in tags:
 			Grid.add_layer_tag(pos, name, tag)
+
+func update_tags(new_tags: Array[String]) -> void:
+	var cells = get_used_cells()
+
+	for pos in cells:
+		Grid.clear_layer_tags(pos, name)
+
+	tags = new_tags
+
+	for pos in cells:
+		for tag in tags:
+			Grid.add_layer_tag(pos, name, tag)
+
+	Grid.refresh_all_tags()

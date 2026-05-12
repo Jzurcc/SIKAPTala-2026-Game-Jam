@@ -1,27 +1,29 @@
 extends Node
 
+enum TagTypes {
+	SOLID, LOCKED, PASSABLE, PUSHABLE, FRAGILE, HEAVY, LIGHT
+}
+
 const TILE_SIZE := 16
 
 var occupied: Dictionary = {}
 var wall_tags: Dictionary = {}
 var layer_tags: Dictionary = {}
-var regions: Array = [] # Array[SubtextRegion]
+var regions: Array = []
 
 func register_region(region: Node2D) -> void:
 	if not region in regions:
 		regions.append(region)
-		# Automatically add its tags to the grid for puzzle logic
 		var rect = region.get_grid_rect()
+		var layer = region.get_effective_layer_name()
 		for x in range(rect.size.x):
 			for y in range(rect.size.y):
 				var pos = rect.position + Vector2i(x, y)
 				for tag in region.tags:
-					add_wall_tag(pos, tag)
+					add_layer_tag(pos, layer, tag)
 
 func unregister_region(region: Node2D) -> void:
 	regions.erase(region)
-	# We don't remove the wall tags here because other things might share them,
-	# but for a dynamic system, we'd need a more robust tag ref-counting.
 
 func get_region_at(pos: Vector2i) -> Node2D:
 	for region in regions:
@@ -69,7 +71,7 @@ func add_wall_tag(pos: Vector2i, tag: String) -> void:
 	if not tag in t:
 		t.append(tag)
 	wall_tags[pos] = t
-	
+
 	if tag == "PUSHABLE":
 		_try_convert_to_node(pos)
 
@@ -78,17 +80,41 @@ func add_layer_tag(pos: Vector2i, layer_name: String, tag: String) -> void:
 		layer_tags[pos] = {}
 	if not layer_tags[pos].has(layer_name):
 		layer_tags[pos][layer_name] = []
-	
-	var tags: Array = layer_tags[pos][layer_name]
-	if not tag in tags:
-		tags.append(tag)
-	
+
+	var tags_list: Array = layer_tags[pos][layer_name]
+	if not tag in tags_list:
+		tags_list.append(tag)
+
 	add_wall_tag(pos, tag)
+
+func clear_layer_tags(pos: Vector2i, layer_name: String) -> void:
+	if layer_tags.has(pos) and layer_tags[pos].has(layer_name):
+		for tag in layer_tags[pos][layer_name]:
+			remove_wall_tag(pos, tag)
+		layer_tags[pos].erase(layer_name)
+
+func refresh_all_tags() -> void:
+	wall_tags.clear()
+	layer_tags.clear()
+
+	for region in regions:
+		if is_instance_valid(region):
+			var rect = region.get_grid_rect()
+			var layer = region.get_effective_layer_name()
+			for x in range(rect.size.x):
+				for y in range(rect.size.y):
+					var pos = rect.position + Vector2i(x, y)
+					for tag in region.tags:
+						add_layer_tag(pos, layer, tag)
+
+	for obj in GameState.world_objects:
+		if is_instance_valid(obj) and obj.get("tags") != null:
+			for tag in obj.tags:
+				add_wall_tag(obj.grid_pos, tag)
 
 func _try_convert_to_node(pos: Vector2i) -> void:
 	if is_occupied(pos): return
-	
-	# Iterate backwards to ensure "Top-Most Wins" (Z-Index order)
+
 	for i in range(GameState.solid_tilemaps.size() - 1, -1, -1):
 		var layer = GameState.solid_tilemaps[i]
 		var source_id = layer.get_cell_source_id(pos)
@@ -98,19 +124,19 @@ func _try_convert_to_node(pos: Vector2i) -> void:
 			if source:
 				var obj = Node2D.new()
 				obj.set_script(world_object_script)
-				
+
 				var sprite = Sprite2D.new()
 				sprite.texture = source.texture
 				sprite.region_enabled = true
 				sprite.region_rect = source.get_tile_texture_region(atlas_coords)
 				obj.add_child(sprite)
-				
+
 				obj.position = grid_to_world(pos)
 				layer.add_sibling(obj)
-				
+
 				if obj.get("tags") != null:
 					obj.tags = wall_tags.get(pos, []).duplicate()
-				
+
 				layer.set_cell(pos, -1)
 				wall_tags.erase(pos)
 				return

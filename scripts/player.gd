@@ -119,7 +119,7 @@ func _step_to(new_pos: Vector2i, dir: Vector2i) -> void:
 	_move_tween = create_tween()
 	_move_tween.set_trans(Tween.TRANS_EXPO)
 	_move_tween.set_ease(Tween.EASE_OUT)
-		
+
 	_move_tween.tween_property(anim_player, "position", Vector2.ZERO, MOVE_DURATION)
 	_move_tween.parallel().tween_property(anim_hair, "position", Vector2.ZERO, MOVE_DURATION)
 	_move_tween.parallel().tween_property(anim_tool, "position", Vector2.ZERO, MOVE_DURATION)
@@ -143,8 +143,7 @@ func _get_held_dir() -> Vector2i:
 		elif dir == Vector2i(1, 0): action = "move_right"
 		elif dir == Vector2i(0, -1): action = "move_forward"
 		elif dir == Vector2i(0, 1): action = "move_back"
-		
-		# Fallback check against global input state in case we missed a release event
+
 		if Input.is_action_pressed(action):
 			return dir
 		else:

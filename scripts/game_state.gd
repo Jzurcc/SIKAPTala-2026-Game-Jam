@@ -17,6 +17,8 @@ var solid_tilemaps: Array[TileMapLayer] = []
 
 func register_player(p: Node2D) -> void:
 	player_ref = p
+	if player_ref:
+		player_ref.z_index = 100
 
 
 func register_entity(e: Node2D) -> void:
@@ -42,6 +44,7 @@ func refresh_tilemaps() -> void:
 func _find_tilemaps_recursive(node: Node) -> void:
 	if node is TileMapLayer:
 		if not node in solid_tilemaps:
+			node.z_index = solid_tilemaps.size() * 10
 			solid_tilemaps.append(node)
 	for child in node.get_children():
 		_find_tilemaps_recursive(child)
@@ -58,7 +61,6 @@ func reset() -> void:
 
 func toggle_substrate() -> void:
 	is_substrate = !is_substrate
-	# Pause the entire game world when in Subtext View
 	get_tree().paused = is_substrate
 	substrate_toggled.emit(is_substrate)
 
@@ -71,9 +73,24 @@ func is_wall_at(pos: Vector2i) -> bool:
 
 
 func is_tile_blocked(pos: Vector2i) -> bool:
-	var wt := Grid.get_wall_tags(pos)
-	if is_wall_at(pos) and not "PASSABLE" in wt:
-		return true
+	if Grid.layer_tags.has(pos) and Grid.layer_tags[pos].has("SubtextRegion"):
+		var tags = Grid.layer_tags[pos]["SubtextRegion"]
+		if "SOLID" in tags: return true
+		if "PASSABLE" in tags: return false
+
+	for i in range(solid_tilemaps.size() - 1, -1, -1):
+		var layer = solid_tilemaps[i]
+		if layer.get_cell_source_id(pos) != -1:
+			if Grid.layer_tags.has(pos) and Grid.layer_tags[pos].has(layer.name):
+				var tags = Grid.layer_tags[pos][layer.name]
+
+				if "SOLID" in tags: return true
+
+				if "PASSABLE" in tags: return false
+
+
+			continue
+
 	return false
 
 

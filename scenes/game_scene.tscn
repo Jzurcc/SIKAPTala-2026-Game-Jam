@@ -28,25 +28,33 @@ script = ExtResource("3_rurhu")
 initial_tags = Array[int]([2, 1])
 
 [node name="Furniture" type="TileMapLayer" parent="." unique_id=1275368969]
-tile_map_data = PackedByteArray("AAAIAAIAAAAoACEAAAAIAAMAAAAoACIAAAAJAAIAAAApACEAAAAJAAMAAAApACIAAAALAAMAAAArACMAAAALAAQAAAArACQAAAALAAUAAAArACUAAAAMAAMAAAAsACMAAAAMAAQAAAAsACQAAAAMAAUAAAAsACUAAAANAAMAAAAtACMAAAANAAQAAAAtACQAAAANAAUAAAAtACUAAAAMAAYAAAAOAAwAAAAJAAYAAAAOAA0AAAA=")
+tile_map_data = PackedByteArray("AAAIAAIAAAAoACEAAAAIAAMAAAAoACIAAAAJAAIAAAApACEAAAAJAAMAAAApACIAAAAMAAYAAAAOAAwAAAAJAAYAAAAOAA0AAAANAAMAAAAtACMAAAAMAAMAAAAsACMAAAALAAUAAAArACUAAAAMAAUAAAAsACUAAAANAAUAAAAtACUAAAALAAMAAAArACMAAAALAAQAAAArACQAAAAMAAQAAAAsACQAAAANAAQAAAAtACQAAAA=")
 tile_set = ExtResource("1_ycayy")
 
-[node name="Furtniture2" type="TileMapLayer" parent="." unique_id=736190419]
-tile_set = ExtResource("1_ycayy")
-
-[node name="Player" parent="." unique_id=299729164 instance=ExtResource("2_bw6k5")]
-position = Vector2(160, 88)
-
-[node name="Camera2D" type="Camera2D" parent="." unique_id=350922790]
-position = Vector2(168, 64)
-limit_left = 0
-limit_top = 0
-script = ExtResource("3_y3j0m")
-
-[node name="SubtextRegion" type="Node2D" parent="." unique_id=1538119553]
+[node name="Bed" type="Node2D" parent="Furniture" unique_id=1538119553]
 position = Vector2(128, 48)
 script = ExtResource("6_rurhu")
 tag_rect = Rect2i(0, 0, 2, 1)
 highlight_rect = Rect2i(0, -1, 2, 2)
 tags_enum = Array[int]([2])
 metadata/_custom_type_script = "uid://ugyx3l3d66u2"
+
+[node name="Carpet" type="Node2D" parent="Furniture" unique_id=1206541273]
+position = Vector2(176, 48)
+script = ExtResource("6_rurhu")
+tag_rect = Rect2i(0, 0, 3, 3)
+highlight_rect = Rect2i(0, 0, 3, 3)
+tags_enum = Array[int]([0])
+metadata/_custom_type_script = "uid://ugyx3l3d66u2"
+
+[node name="Furtniture2" type="TileMapLayer" parent="." unique_id=736190419]
+tile_set = ExtResource("1_ycayy")
+
+[node name="Player" parent="." unique_id=299729164 instance=ExtResource("2_bw6k5")]
+position = Vector2(136, 88)
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=350922790]
+position = Vector2(168, 64)
+limit_left = 0
+limit_top = 0
+script = ExtResource("3_y3j0m")
