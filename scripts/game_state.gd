@@ -3,6 +3,7 @@ extends Node
 signal turn_processed
 signal substrate_toggled(active: bool)
 signal player_died
+signal player_moved(world_pos: Vector2)
 signal level_won
 
 var is_substrate: bool = false
@@ -68,7 +69,7 @@ func has_harmful_at(pos: Vector2i) -> bool:
 	var wt := Grid.get_wall_tags(pos)
 	if "HARMFUL" in wt:
 		return true
-	var occ := Grid.get_occupant(pos)
+	var occ: Node2D = Grid.get_occupant(pos)
 	if occ != null and occ != player_ref:
 		if occ.get("tags") != null and "HARMFUL" in occ.tags:
 			return true
@@ -120,6 +121,7 @@ func pop_undo_state() -> void:
 		player_ref.grid_pos = snap["p"]
 		player_ref.position = Grid.grid_to_world(player_ref.grid_pos)
 		Grid.occupy(player_ref.grid_pos, player_ref)
+		player_moved.emit(player_ref.position)
 
 	Grid.wall_tags.clear()
 	for k in snap["wt"]:

@@ -1,0 +1,145 @@
+{
+  "name": "SUBTEXT — Game Jam Dev Board",
+  "defaultLists": false,
+  "labels": [
+    { "name": "Critical", "color": "red", "id": "lab_crit" },
+    { "name": "High", "color": "orange", "id": "lab_high" },
+    { "name": "Medium", "color": "yellow", "id": "lab_med" },
+    { "name": "Code", "color": "blue", "id": "lab_code" },
+    { "name": "Art", "color": "purple", "id": "lab_art" },
+    { "name": "Audio", "color": "sky", "id": "lab_audio" },
+    { "name": "Design", "color": "pink", "id": "lab_design" },
+    { "name": "Done", "color": "green", "id": "lab_done" }
+  ],
+  "lists": [
+    {
+      "name": "✅ Done",
+      "cards": [
+        { "name": "Project Settings — pixel art, viewport 320x180, nearest filter", "idLabels": ["lab_code", "lab_done"] },
+        { "name": "grid.gd autoload — tile size, occupied dict, wall_tags", "idLabels": ["lab_code", "lab_done"] },
+        { "name": "game_state.gd autoload — undo stack, turn processing, signals", "idLabels": ["lab_code", "lab_done"] },
+        { "name": "player.gd — grid movement, push delegation, death, undo/substrate input", "idLabels": ["lab_code", "lab_done"] },
+        { "name": "Design docs — game_concept, puzzle_design, levels, mechanics gaps", "idLabels": ["lab_design", "lab_done"] }
+      ]
+    },
+    {
+      "name": "🚨 Must Ship (Blocker)",
+      "cards": [
+        { "name": "world_object.gd — static prop, holds tags, push() when LIGHT, register in GameState", "idLabels": ["lab_crit", "lab_code"] },
+        { "name": "entity.gd — base class, grid_pos, tags[], take_turn(), register in GameState", "idLabels": ["lab_crit", "lab_code"] },
+        { "name": "Tag system — add/remove tag on object (max 2), substrate drag interaction", "idLabels": ["lab_crit", "lab_code"] },
+        { "name": "Substrate view toggle — visual overlay shader/modulate, disable movement", "idLabels": ["lab_crit", "lab_code"] },
+        { "name": "Win condition checker — GoalTile node, checks per-turn, emits level_won", "idLabels": ["lab_crit", "lab_code"] },
+        { "name": "HARMFUL — player dies on contact, entity dies on HARMFUL tile", "idLabels": ["lab_crit", "lab_code"] },
+        { "name": "FRAGILE — breaks on contact, tags scatter clockwise to adjacent tiles", "idLabels": ["lab_crit", "lab_code"] },
+        { "name": "PASSABLE — wall traversal logic in is_tile_blocked()", "idLabels": ["lab_crit", "lab_code"] },
+        { "name": "SLEEPING — entity skips take_turn()", "idLabels": ["lab_crit", "lab_code"] },
+        { "name": "CHASING — entity moves 1 tile toward target each turn", "idLabels": ["lab_crit", "lab_code"] },
+        { "name": "Level scene structure — TileMapLayer walls, player node, goal tile", "idLabels": ["lab_crit", "lab_code"] },
+        { "name": "Level 1 — Ink & Instinct (PASSABLE tutorial)", "idLabels": ["lab_crit", "lab_design"] },
+        { "name": "Level 2 — Nothing Given (conservation law)", "idLabels": ["lab_crit", "lab_design"] },
+        { "name": "Level 3 — Dead Weight (LIGHT + DELIVER)", "idLabels": ["lab_crit", "lab_design"] },
+        { "name": "Level 4 — One Chance (FRAGILE order)", "idLabels": ["lab_crit", "lab_design"] },
+        { "name": "Level 5 — First Contact (first enemy)", "idLabels": ["lab_crit", "lab_design"] },
+        { "name": "Player sprite — idle + walk 4 directions", "idLabels": ["lab_crit", "lab_art"] },
+        { "name": "Stone wall tile + floor tile (cobblestone)", "idLabels": ["lab_crit", "lab_art"] },
+        { "name": "Wooden crate sprite", "idLabels": ["lab_crit", "lab_art"] },
+        { "name": "Enemy sprite (town bully, guard)", "idLabels": ["lab_crit", "lab_art"] },
+        { "name": "Exit archway sprite + glow", "idLabels": ["lab_crit", "lab_art"] },
+        { "name": "Tag label sprites x12 (PASSABLE, LIGHT, FRAGILE, HARMFUL, SLEEPING, CHASING, FLEEING, PATROLLING, HIDDEN, PULLING, PUSHING, FRIENDLY)", "idLabels": ["lab_crit", "lab_art"] },
+        { "name": "Win SFX + death SFX", "idLabels": ["lab_crit", "lab_audio"] },
+        { "name": "Background music — cozy/mystical loop", "idLabels": ["lab_crit", "lab_audio"] }
+      ]
+    },
+    {
+      "name": "🎮 Core Mechanics (High)",
+      "cards": [
+        { "name": "LIGHT — world_object becomes pushable, push() checks target tile", "idLabels": ["lab_high", "lab_code"] },
+        { "name": "FLEEING — entity moves away from player each turn", "idLabels": ["lab_high", "lab_code"] },
+        { "name": "PATROLLING — entity follows fixed Vector2i[] path, loops", "idLabels": ["lab_high", "lab_code"] },
+        { "name": "HIDDEN — entity/object skips surface render, visible in substrate only", "idLabels": ["lab_high", "lab_code"] },
+        { "name": "FRAGILE on entity — entity dies on collision with any solid", "idLabels": ["lab_high", "lab_code"] },
+        { "name": "FRIENDLY — interact on adjacent press, triggers COLLECT win or dialogue", "idLabels": ["lab_high", "lab_code"] },
+        { "name": "PULLING — entity/wall pulls player 1 tile toward it after player move", "idLabels": ["lab_high", "lab_code"] },
+        { "name": "Max 2 tags per object — block 3rd tag, show blocked FX", "idLabels": ["lab_high", "lab_code"] },
+        { "name": "Substrate drag UX — click object to pick tag, click target to place", "idLabels": ["lab_high", "lab_code"] },
+        { "name": "Entity burst catch-up — process N queued turns on substrate exit", "idLabels": ["lab_high", "lab_code"] },
+        { "name": "NARCOLEPTIC behavior — CHASING+SLEEPING alternate each turn", "idLabels": ["lab_high", "lab_code"] },
+        { "name": "DELIVER win condition — WorldObject must be at GoalTile position", "idLabels": ["lab_high", "lab_code"] },
+        { "name": "SLEEP win condition — named entity at GoalTile with SLEEPING tag", "idLabels": ["lab_high", "lab_code"] },
+        { "name": "DEFEAT win condition — named entity removed from scene", "idLabels": ["lab_high", "lab_code"] },
+        { "name": "PROTECT win condition — reach exit while named NPC still alive", "idLabels": ["lab_high", "lab_code"] },
+        { "name": "SHATTER win condition — specific FRAGILE tile destroyed", "idLabels": ["lab_high", "lab_code"] }
+      ]
+    },
+    {
+      "name": "🗺️ Levels (High)",
+      "cards": [
+        { "name": "Level 6 — Come Home (SLEEPING as placement tool, SLEEP win)", "idLabels": ["lab_high", "lab_design"] },
+        { "name": "Level 7 — The Messenger (FLEEING+FRIENDLY, COLLECT win)", "idLabels": ["lab_high", "lab_design"] },
+        { "name": "Level 8 — Transfer (cross-type tag move)", "idLabels": ["lab_high", "lab_design"] },
+        { "name": "Level 9 — Night Delivery (PATROLLING guard, DELIVER win)", "idLabels": ["lab_high", "lab_design"] },
+        { "name": "Level 10 — Pest Control (DEFEAT win, HARMFUL placement kill)", "idLabels": ["lab_high", "lab_design"] },
+        { "name": "Level 11 — Safe Passage (PROTECT win, multi-entity)", "idLabels": ["lab_high", "lab_design"] },
+        { "name": "Level 12 — Condemned (SHATTER win, FRAGILE scatter)", "idLabels": ["lab_high", "lab_design"] },
+        { "name": "Level 13 — Rhythm (NARCOLEPTIC timing)", "idLabels": ["lab_high", "lab_design"] },
+        { "name": "Level 14 — As It Really Is (full deception, HIDDEN everything)", "idLabels": ["lab_high", "lab_design"] },
+        { "name": "Level transition system — title card fade in/out between levels", "idLabels": ["lab_high", "lab_code"] }
+      ]
+    },
+    {
+      "name": "🖼️ Art & Visuals (Medium)",
+      "cards": [
+        { "name": "Flower pot, bench, barrel, lamppost, urn, fence post sprites", "idLabels": ["lab_med", "lab_art"] },
+        { "name": "Crumbling wall (FRAGILE) tile + break animation (3 frames)", "idLabels": ["lab_med", "lab_art"] },
+        { "name": "NPC sprites — cat, dog, elder, merchant, ghost", "idLabels": ["lab_med", "lab_art"] },
+        { "name": "Goal tile markers — delivery spot, doghouse, condemned X", "idLabels": ["lab_med", "lab_art"] },
+        { "name": "Substrate overlay — full-screen ink-wash desaturation effect", "idLabels": ["lab_med", "lab_art"] },
+        { "name": "Tag float animation — labels bob gently in substrate view", "idLabels": ["lab_med", "lab_art"] },
+        { "name": "Tag drag ghost — semi-transparent label follows cursor", "idLabels": ["lab_med", "lab_art"] },
+        { "name": "Death FX — ink splatter particle burst", "idLabels": ["lab_med", "lab_art"] },
+        { "name": "Win FX — golden glow radiating from exit", "idLabels": ["lab_med", "lab_art"] },
+        { "name": "Tag snap FX — small ink splash on placement", "idLabels": ["lab_med", "lab_art"] },
+        { "name": "HARMFUL floor tile visual — dark/cracked floor variant", "idLabels": ["lab_med", "lab_art"] },
+        { "name": "Grass + dirt path tiles for outdoor levels", "idLabels": ["lab_med", "lab_art"] }
+      ]
+    },
+    {
+      "name": "🔊 Audio (Medium)",
+      "cards": [
+        { "name": "Player step SFX — soft footstep, 2-3 variants", "idLabels": ["lab_med", "lab_audio"] },
+        { "name": "Tag pickup SFX — paper rustle", "idLabels": ["lab_med", "lab_audio"] },
+        { "name": "Tag place SFX — soft ink stamp", "idLabels": ["lab_med", "lab_audio"] },
+        { "name": "Wall break SFX — stone crumble", "idLabels": ["lab_med", "lab_audio"] },
+        { "name": "Substrate toggle SFX — ink wash whoosh", "idLabels": ["lab_med", "lab_audio"] },
+        { "name": "Entity movement SFX — subtle per-entity step", "idLabels": ["lab_med", "lab_audio"] },
+        { "name": "Tag blocked SFX — soft thud for 3rd tag attempt", "idLabels": ["lab_med", "lab_audio"] }
+      ]
+    },
+    {
+      "name": "🖥️ UI/UX (Medium)",
+      "cards": [
+        { "name": "Level title card — ink-brush font, fade in/out on level start", "idLabels": ["lab_med", "lab_code"] },
+        { "name": "Undo hint label — 'U to undo' visible on HUD", "idLabels": ["lab_med", "lab_code"] },
+        { "name": "Win screen — level complete message + next level button", "idLabels": ["lab_med", "lab_code"] },
+        { "name": "Death/restart screen — brief flash, auto-reload after 0.4s", "idLabels": ["lab_med", "lab_code"] },
+        { "name": "Main menu — title + start button", "idLabels": ["lab_med", "lab_code"] },
+        { "name": "Substrate mode indicator — visible HUD state when in substrate", "idLabels": ["lab_med", "lab_code"] },
+        { "name": "Pause menu — resume + restart level + quit", "idLabels": ["lab_med", "lab_code"] }
+      ]
+    },
+    {
+      "name": "✨ Polish (Nice to Have)",
+      "cards": [
+        { "name": "Player walk animation per direction (N/S/E/W)", "idLabels": ["lab_art"] },
+        { "name": "Camera — centered on player, pixel-perfect, no smoothing", "idLabels": ["lab_code"] },
+        { "name": "Level select screen", "idLabels": ["lab_code"] },
+        { "name": "Deadlock indicator — faint red screen border pulse", "idLabels": ["lab_code"] },
+        { "name": "Playtesting all 14 levels for fairness + aha moments", "idLabels": ["lab_design"] },
+        { "name": "Difficulty balance pass — adjust entity start positions", "idLabels": ["lab_design"] },
+        { "name": "PUSHING tag — entity pushes world objects on contact", "idLabels": ["lab_code"] },
+        { "name": "Additional music track for substrate view", "idLabels": ["lab_audio"] }
+      ]
+    }
+  ]
+}
