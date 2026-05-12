@@ -12,7 +12,7 @@ var undo_stack: Array[Dictionary] = []
 var player_ref: Node2D = null
 var entities: Array[Node2D] = []
 var world_objects: Array[Node2D] = []
-var wall_tilemap: TileMapLayer = null
+var solid_tilemaps: Array[TileMapLayer] = []
 
 
 func register_player(p: Node2D) -> void:
@@ -34,7 +34,8 @@ func register_object(o: Node2D) -> void:
 
 
 func register_tilemap(t: TileMapLayer) -> void:
-	wall_tilemap = t
+	if not t in solid_tilemaps:
+		solid_tilemaps.append(t)
 
 
 func reset() -> void:
@@ -42,20 +43,23 @@ func reset() -> void:
 	world_objects.clear()
 	undo_stack.clear()
 	player_ref = null
-	wall_tilemap = null
+	solid_tilemaps.clear()
 	is_substrate = false
 	Grid.clear()
 
 
 func toggle_substrate() -> void:
 	is_substrate = !is_substrate
+	# Pause the entire game world when in Subtext View
+	get_tree().paused = is_substrate
 	substrate_toggled.emit(is_substrate)
 
 
 func is_wall_at(pos: Vector2i) -> bool:
-	if wall_tilemap == null:
-		return false
-	return wall_tilemap.get_cell_source_id(pos) != -1
+	for t in solid_tilemaps:
+		if t.get_cell_source_id(pos) != -1:
+			return true
+	return false
 
 
 func is_tile_blocked(pos: Vector2i) -> bool:

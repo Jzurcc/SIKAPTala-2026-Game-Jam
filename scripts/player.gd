@@ -4,7 +4,7 @@ extends Node2D
 @onready var anim_hair: AnimatedSprite2D = $HairSprite
 @onready var anim_tool: AnimatedSprite2D = $ToolSprite
 
-const MOVE_DURATION := 0.18
+const MOVE_DURATION := 0.28 
 
 var grid_pos: Vector2i = Vector2i.ZERO
 var tags: Array[String] = []
@@ -24,7 +24,6 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	# Always track the priority order of held movement keys
 	_handle_dir_stack(event, "move_left", Vector2i(-1, 0))
 	_handle_dir_stack(event, "move_right", Vector2i(1, 0))
 	_handle_dir_stack(event, "move_forward", Vector2i(0, -1))
@@ -43,9 +42,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if is_moving:
 		return
 
-	if event.is_action_pressed("substrate_toggle"):
-		GameState.toggle_substrate()
-		get_viewport().set_input_as_handled()
+	if is_dead:
 		return
 
 	if GameState.is_substrate:
@@ -118,8 +115,19 @@ func _step_to(new_pos: Vector2i, dir: Vector2i) -> void:
 
 	is_moving = true
 	_move_tween = create_tween()
-	_move_tween.set_trans(Tween.TRANS_EXPO)
-	_move_tween.set_ease(Tween.EASE_OUT)
+	
+	# Detect if this is the last tile (no keys held)
+	var is_last_tile = (_get_held_dir() == Vector2i.ZERO)
+	
+	if is_last_tile:
+		# Add a nice overshoot/bounce back effect for stopping
+		_move_tween.set_trans(Tween.TRANS_BACK)
+		_move_tween.set_ease(Tween.EASE_OUT)
+	else:
+		# Smooth transition for continuous walking
+		_move_tween.set_trans(Tween.TRANS_SINE)
+		_move_tween.set_ease(Tween.EASE_IN_OUT)
+		
 	_move_tween.tween_property(anim_player, "position", Vector2.ZERO, MOVE_DURATION)
 	_move_tween.parallel().tween_property(anim_hair, "position", Vector2.ZERO, MOVE_DURATION)
 	_move_tween.parallel().tween_property(anim_tool, "position", Vector2.ZERO, MOVE_DURATION)
