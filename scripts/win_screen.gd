@@ -2,14 +2,24 @@ extends Control
 
 @onready var yes_label: Label = $OptionsRow/YesLabel
 @onready var no_label: Label = $OptionsRow/NoLabel
+@onready var you_win_label: Label = $YouWinLabel
 
 var selected: int = 0
 var options: Array = []
+var base_y: float = 0.0
+var timer: float = 0.0
 
 
 func _ready() -> void:
 	options = [yes_label, no_label]
+	base_y = you_win_label.position.y
 	_update_sel()
+
+
+func _process(delta: float) -> void:
+	timer += delta
+	# pingpong creates a linear, constant-speed wave that doesn't "rest" or ease at the peaks
+	you_win_label.position.y = base_y - 1.5 + pingpong(timer * 4.0, 3.0)
 
 
 func _unhandled_input(event: InputEvent) -> void:
