@@ -1,11 +1,12 @@
 [gd_scene format=4 uid="uid://dgjrlrr3uno32"]
 
-[ext_resource type="Texture2D" uid="uid://c5x41tp7lbr0x" path="res://assets/sprites/World/Tileset/spr_tileset_sunnysideworld_16px.png" id="1_04qyp"]
-[ext_resource type="PackedScene" uid="uid://b0gkamsn4tty2" path="res://scenes/player.tscn" id="2_4dvvg"]
-[ext_resource type="Script" uid="uid://c8qyug1wj41uf" path="res://scripts/camera.gd" id="3_rnjyy"]
+[ext_resource type="Texture2D" uid="uid://c5x41tp7lbr0x" path="res://assets/sprites/World/Tileset/spr_tileset_sunnysideworld_16px.png" id="1_ycayy"]
+[ext_resource type="PackedScene" uid="uid://b0gkamsn4tty2" path="res://scenes/player.tscn" id="2_bw6k5"]
+[ext_resource type="Script" uid="uid://c8qyug1wj41uf" path="res://scripts/camera.gd" id="3_y3j0m"]
+[ext_resource type="Texture2D" uid="uid://bal731588c7u6" path="res://assets/sprites/World/UI/9slice_box_white/lt_box_9slice_combined.png" id="4_bw6k5"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_dubn7"]
-texture = ExtResource("1_04qyp")
+texture = ExtResource("1_ycayy")
 12:0/0 = 0
 13:0/0 = 0
 14:0/0 = 0
@@ -1758,7 +1759,7 @@ tile_set = SubResource("TileSet_08kqv")
 
 [node name="Walls" type="TileMapLayer" parent="." unique_id=1308272264]
 
-[node name="Player" parent="." unique_id=299729164 instance=ExtResource("2_4dvvg")]
+[node name="Player" parent="." unique_id=299729164 instance=ExtResource("2_bw6k5")]
 position = Vector2(168, 64)
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=350922790]
@@ -1766,4 +1767,13 @@ position = Vector2(168, 64)
 zoom = Vector2(1.5, 1.5)
 limit_left = 0
 limit_top = 0
-script = ExtResource("3_rnjyy")
+script = ExtResource("3_y3j0m")
+
+[node name="NinePatchRect" type="NinePatchRect" parent="." unique_id=1443512567]
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("4_bw6k5")
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
