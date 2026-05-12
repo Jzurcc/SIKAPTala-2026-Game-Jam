@@ -4,9 +4,9 @@ enum TagTypes {
 	SOLID, LOCKED, PASSABLE, PUSHABLE, FRAGILE, HEAVY, LIGHT
 }
 
-@export var initial_tags: Array[TagTypes] = [TagTypes.SOLID]
+@export var initial_tags: Array[TagTypes] = [TagTypes.PASSABLE]
 
-## Basic wall layer script that registers collision and adds tags to all tiles.
+## Script for floor layers that registers all tiles with dynamic tags.
 func _ready() -> void:
 	var string_tags = []
 	for t in initial_tags:

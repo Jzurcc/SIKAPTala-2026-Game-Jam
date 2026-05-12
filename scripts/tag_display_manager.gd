@@ -56,10 +56,28 @@ func _input(event: InputEvent) -> void:
 		else:
 			# Check if clicking on content to select
 			var grid_pos = Grid.world_to_grid(mouse_pos)
-			var tags = Grid.get_wall_tags(grid_pos)
-			var occupant = Grid.get_occupant(grid_pos)
-			if not tags.is_empty() or (occupant and occupant != GameState.player_ref):
+			var top_layer = get_hovered_tile_layer(mouse_pos)
+			
+			var region = Grid.get_region_at(grid_pos)
+			if region != null:
+				var target = region.get("target_layer_name")
+				if target != null and target != "" and top_layer != null and target != top_layer.name:
+					region = null # Region doesn't belong to the topmost hovered layer
+				elif not region.is_pixel_opaque(mouse_pos):
+					region = null # Region is transparent here, fall through
+			
+			if region != null:
 				_select()
+			else:
+				var tags = []
+				if top_layer != null and Grid.layer_tags.has(grid_pos):
+					var lt = Grid.layer_tags[grid_pos]
+					if lt.has(top_layer.name):
+						tags = lt[top_layer.name].duplicate()
+				
+				var occupant = Grid.get_occupant(grid_pos)
+				if not tags.is_empty() or (occupant and occupant != GameState.player_ref):
+					_select()
 
 func _select() -> void:
 	is_selected = true
@@ -79,6 +97,7 @@ func _process(_delta: float) -> void:
 		_clear_highlight()
 		tile_highlight_sprite.visible = false
 		hover_label.modulate.a = 0
+		current_tags = [] # Reset tags so reopen triggers setup()
 		return
 	
 	if is_selected:
@@ -90,55 +109,118 @@ func _process(_delta: float) -> void:
 	var mouse_pos = scene.get_global_mouse_position()
 	var grid_pos = Grid.world_to_grid(mouse_pos)
 	
-	# 1. Check for walls/objects at grid position
-	var tags = Grid.get_wall_tags(grid_pos)
+	var tags: Array = []
+	var target_world_pos: Vector2
+	var has_content: bool = false
+	
+	var top_layer = get_hovered_tile_layer(mouse_pos)
+	var region = Grid.get_region_at(grid_pos)
+	
+	if region != null:
+		var target = region.get("target_layer_name")
+		if target != null and target != "" and top_layer != null and target != top_layer.name:
+			region = null # Region is obscured by a higher layer
+		elif not region.is_pixel_opaque(mouse_pos):
+			region = null # Region is transparent here, fall through
+			
 	var occupant = Grid.get_occupant(grid_pos)
 	
-	# 2. Highlight handling
-	var has_content = not tags.is_empty() or (occupant and occupant != GameState.player_ref)
-	
-	if has_content:
+	if region != null:
+		# Gather all tags from the entire area the region covers, BUT only for its target layer
+		tags = []
+		var rect = region.get_grid_rect()
+		var target_name = region.get("target_layer_name")
+		if target_name == null or target_name == "": target_name = "SubtextRegion"
+		
+		for x in range(rect.size.x):
+			for y in range(rect.size.y):
+				var p = rect.position + Vector2i(x, y)
+				if Grid.layer_tags.has(p) and Grid.layer_tags[p].has(target_name):
+					for t in Grid.layer_tags[p][target_name]:
+						if not t in tags: tags.append(t)
+					
+		target_world_pos = region.get_center_world_pos()
+		has_content = true
+		tile_highlight_sprite.visible = false
+		_set_highlight(region)
+	else:
+		tags = []
+		if top_layer != null and Grid.layer_tags.has(grid_pos):
+			var lt = Grid.layer_tags[grid_pos]
+			if lt.has(top_layer.name):
+				tags = lt[top_layer.name].duplicate()
+				
+		target_world_pos = Grid.grid_to_world(grid_pos)
+		
 		if occupant and occupant != GameState.player_ref:
 			_set_highlight(occupant)
 			tile_highlight_sprite.visible = false
 			if occupant.get("tags") != null:
 				for t in occupant.tags:
 					if not t in tags: tags.append(t)
-		else:
+			has_content = true
+		elif top_layer != null and not tags.is_empty():
 			_clear_highlight()
-			_highlight_tile(grid_pos)
-	else:
-		tile_highlight_sprite.visible = false
-		_clear_highlight()
+			_highlight_layer_tile(top_layer, grid_pos)
+			has_content = true
+		else:
+			tile_highlight_sprite.visible = false
+			_clear_highlight()
 
 	# 3. Tag Logic
-	if not tags.is_empty():
+	if has_content and not tags.is_empty():
 		if tags != current_tags:
 			current_tags = tags
 			hover_label.setup(tags)
 		
-		hover_label.global_position = Grid.grid_to_world(grid_pos)
+		# Smoothly glide the label to the target position instead of snapping
+		hover_label.global_position = hover_label.global_position.lerp(target_world_pos, 0.15)
 		hover_label.modulate.a = lerp(hover_label.modulate.a, 1.0, 0.2)
 	else:
 		hover_label.modulate.a = lerp(hover_label.modulate.a, 0.0, 0.3)
 		if hover_label.modulate.a < 0.05:
 			current_tags = []
 
-func _highlight_tile(pos: Vector2i) -> void:
-	# Find which layer has the tile at this position
-	for layer in GameState.solid_tilemaps:
-		var source_id = layer.get_cell_source_id(pos)
+func get_hovered_tile_layer(mouse_pos: Vector2) -> TileMapLayer:
+	var grid_pos = Grid.world_to_grid(mouse_pos)
+	for i in range(GameState.solid_tilemaps.size() - 1, -1, -1):
+		var layer = GameState.solid_tilemaps[i]
+		var source_id = layer.get_cell_source_id(grid_pos)
 		if source_id != -1:
-			var atlas_coords = layer.get_cell_atlas_coords(pos)
-			var alternative_tile = layer.get_cell_alternative_tile(pos)
-			var source: TileSetAtlasSource = layer.tile_set.get_source(source_id)
-			
+			var atlas_coords = layer.get_cell_atlas_coords(grid_pos)
+			var source = layer.tile_set.get_source(source_id) as TileSetAtlasSource
 			if source:
-				tile_highlight_sprite.texture = source.texture
-				tile_highlight_sprite.region_rect = source.get_tile_texture_region(atlas_coords)
-				tile_highlight_sprite.global_position = Grid.grid_to_world(pos)
-				tile_highlight_sprite.visible = true
-				return
+				var rect = source.get_tile_texture_region(atlas_coords)
+				var tile_data = source.get_tile_data(atlas_coords, 0)
+				var offset = Vector2(tile_data.texture_origin) if tile_data else Vector2.ZERO
+				var cell_center = Grid.grid_to_world(grid_pos)
+				var tex_center = cell_center - offset
+				var local_pos = mouse_pos - tex_center
+				var half_size = rect.size / 2.0
+				
+				if local_pos.x >= -half_size.x and local_pos.x < half_size.x and \
+				   local_pos.y >= -half_size.y and local_pos.y < half_size.y:
+					
+					var pixel_x = int(rect.position.x + local_pos.x + half_size.x)
+					var pixel_y = int(rect.position.y + local_pos.y + half_size.y)
+					
+					var img = Grid.get_texture_image(source.texture)
+					if pixel_x >= 0 and pixel_y >= 0 and pixel_x < img.get_width() and pixel_y < img.get_height():
+						if img.get_pixel(pixel_x, pixel_y).a > 0.5:
+							return layer
+	return null
+
+func _highlight_layer_tile(layer: TileMapLayer, pos: Vector2i) -> void:
+	var source_id = layer.get_cell_source_id(pos)
+	if source_id != -1:
+		var atlas_coords = layer.get_cell_atlas_coords(pos)
+		var source: TileSetAtlasSource = layer.tile_set.get_source(source_id)
+		if source:
+			tile_highlight_sprite.texture = source.texture
+			tile_highlight_sprite.region_rect = source.get_tile_texture_region(atlas_coords)
+			tile_highlight_sprite.global_position = Grid.grid_to_world(pos)
+			tile_highlight_sprite.visible = true
+			return
 	
 	tile_highlight_sprite.visible = false
 
@@ -146,9 +228,15 @@ func _set_highlight(node: Node2D) -> void:
 	if last_highlighted == node: return
 	_clear_highlight()
 	last_highlighted = node
-	node.modulate = Color(0.7, 0.8, 1.2, 1.0) 
+	if node.has_method("set_highlighted"):
+		node.set_highlighted(true)
+	else:
+		node.modulate = Color(0.7, 0.8, 1.2, 1.0) 
 
 func _clear_highlight() -> void:
 	if is_instance_valid(last_highlighted):
-		last_highlighted.modulate = Color.WHITE
+		if last_highlighted.has_method("set_highlighted"):
+			last_highlighted.set_highlighted(false)
+		else:
+			last_highlighted.modulate = Color.WHITE
 	last_highlighted = null

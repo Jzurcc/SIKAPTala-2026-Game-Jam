@@ -33,10 +33,18 @@ func register_object(o: Node2D) -> void:
 		world_objects.append(o)
 
 
-func register_tilemap(t: TileMapLayer) -> void:
-	if not t in solid_tilemaps:
-		solid_tilemaps.append(t)
+func refresh_tilemaps() -> void:
+	solid_tilemaps.clear()
+	var root = get_tree().current_scene
+	if root:
+		_find_tilemaps_recursive(root)
 
+func _find_tilemaps_recursive(node: Node) -> void:
+	if node is TileMapLayer:
+		if not node in solid_tilemaps:
+			solid_tilemaps.append(node)
+	for child in node.get_children():
+		_find_tilemaps_recursive(child)
 
 func reset() -> void:
 	entities.clear()
