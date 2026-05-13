@@ -34,6 +34,8 @@ var solid_tilemaps: Array[TileMapLayer] = []
 
 
 func _ready() -> void:
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
+	
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
 	
