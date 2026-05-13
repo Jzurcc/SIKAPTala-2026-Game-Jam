@@ -42,6 +42,20 @@ var bgm_player: AudioStreamPlayer
 
 func _ready() -> void:
 	options = [start_label, exit_label]
+	for i in range(options.size()):
+		var lbl: Label = options[i]
+		lbl.mouse_filter = Control.MOUSE_FILTER_STOP
+		lbl.mouse_entered.connect(func():
+			if can_input and selected != i:
+				selected = i
+				GameState.play_deselect_sfx()
+				_update_sel()
+		)
+		lbl.gui_input.connect(func(event: InputEvent):
+			if can_input and event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+				GameState.play_select_sfx()
+				_confirm()
+		)
 	start_label.modulate.a = 0.0
 	exit_label.modulate.a = 0.0
 	title_red.modulate = Color(1.0, 0.4, 0.4, 0.0)
