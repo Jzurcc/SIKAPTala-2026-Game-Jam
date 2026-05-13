@@ -12,6 +12,7 @@ var is_alive: bool = true
 var anim: AnimatedSprite2D
 
 func _ready() -> void:
+	z_index = 100 # Fix visibility: force entities to render above floor/wall tilemaps
 	for child in get_children():
 		if child is AnimatedSprite2D:
 			anim = child
@@ -54,6 +55,11 @@ func take_turn() -> void:
 func _do_chase() -> void:
 	if GameState.player_ref == null:
 		return
+		
+	if randf() > 0.5:
+		_play_anim("Idle")
+		return
+		
 	var target_pos: Vector2i = GameState.player_ref.grid_pos
 	var dir := _dir_toward(target_pos)
 	if dir == Vector2i.ZERO:
@@ -98,8 +104,7 @@ func _try_move(dir: Vector2i) -> bool:
 	if occupant != null:
 		if occupant == GameState.player_ref:
 			if "HARMFUL" in tags:
-				_play_anim("Attack")
-				GameState.player_ref._die()
+				attack_player()
 			else:
 				_play_anim("Idle")
 			return false
@@ -141,6 +146,25 @@ func _check_harmful_tile() -> void:
 	var wt := Grid.get_wall_tags(grid_pos)
 	if "HARMFUL" in wt:
 		_die()
+
+
+func attack_player() -> void:
+	var attack_duration = 0.8
+	if anim and anim.sprite_frames and anim.sprite_frames.has_animation("Attack"):
+		var fps = anim.sprite_frames.get_animation_speed("Attack")
+		var frames = anim.sprite_frames.get_frame_count("Attack")
+		if fps > 0:
+			attack_duration = frames / float(fps)
+	
+	# Rotate to face player if possible
+	if GameState.player_ref:
+		var diff = GameState.player_ref.grid_pos - grid_pos
+		if diff.x < 0 and anim: anim.flip_h = true
+		elif diff.x > 0 and anim: anim.flip_h = false
+		
+	_play_anim("Attack")
+	if GameState.player_ref:
+		GameState.player_ref._die(attack_duration)
 
 
 func _dir_toward(target: Vector2i) -> Vector2i:

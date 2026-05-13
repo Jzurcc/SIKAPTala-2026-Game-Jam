@@ -40,6 +40,6 @@ func _update_sel() -> void:
 func _confirm() -> void:
 	match selected:
 		0:
-			get_tree().change_scene_to_file("res://scenes/node_2d.tscn")
+			GameState.transition_to_scene("res://scenes/game_scene.tscn")
 		1:
-			get_tree().change_scene_to_file("res://scenes/title_screen.tscn")
+			GameState.transition_to_scene("res://scenes/title_screen.tscn")

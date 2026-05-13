@@ -20,9 +20,37 @@ var _last_dialogue_indices: Dictionary = {} # instance_id -> int
 var selector: Sprite2D
 var selector_tween: Tween
 
+var tutorial_active: bool = false
+var _tutorial_layer: CanvasLayer
+var _tutorial_label: Label
+var _tutorial_prompt: Label
+var _tutorial_is_typing: bool = false
+var _tutorial_texts: Array[String] = [
+	"Most people walk through the world without reading it.",
+	"You have always read everything.",
+	"Press TAB to perceive the Subtext.",
+	"You can rearrange the words of this world.",
+	"Click a tag to hold it, and drop it onto another object's tag.",
+	"Press E to interact with your surroundings.",
+	"Swap the word, shape the world.",
+	"Change your view and escape this reality."
+]
+var _tutorial_index: int = 0
+var _tutorial_tween: Tween
+var _prompt_tween: Tween
+
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	add_to_group("player")
+	
+	# Ensure sprites freeze when the game is paused (e.g. during TAB or tutorial)
+	anim_player.process_mode = Node.PROCESS_MODE_PAUSABLE
+	anim_hair.process_mode = Node.PROCESS_MODE_PAUSABLE
+	anim_tool.process_mode = Node.PROCESS_MODE_PAUSABLE
+	
 	_setup_dialogue_ui()
+	_start_tutorial_sequence()
 	GameState.register_player(self)
 	
 	# Create a nice interaction selector
@@ -63,6 +91,91 @@ func _setup_dialogue_ui() -> void:
 	_dialogue_label.modulate.a = 0.0
 
 
+func _start_tutorial_sequence() -> void:
+	if GameState.tutorial_completed:
+		return
+		
+	await get_tree().create_timer(4.0).timeout
+	
+	_tutorial_layer = CanvasLayer.new()
+	_tutorial_layer.layer = 110
+	
+	_tutorial_label = Label.new()
+	_tutorial_label.name = "TutLabel"
+	_tutorial_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_tutorial_label.offset_top = -50
+	_tutorial_label.offset_bottom = -25
+	_tutorial_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var font = load("res://assets/sprites/World/Fonts/Kenney Mini.ttf")
+	if font: _tutorial_label.add_theme_font_override("font", font)
+	_tutorial_label.add_theme_font_size_override("font_size", 8) # slightly tinier
+	_tutorial_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	_tutorial_label.add_theme_constant_override("outline_size", 4)
+	_tutorial_label.visible_ratio = 0.0
+	_tutorial_layer.add_child(_tutorial_label)
+	
+	_tutorial_prompt = Label.new()
+	_tutorial_prompt.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_tutorial_prompt.offset_top = -32
+	_tutorial_prompt.offset_bottom = -20
+	_tutorial_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if font: _tutorial_prompt.add_theme_font_override("font", font)
+	_tutorial_prompt.add_theme_font_size_override("font_size", 6)
+	_tutorial_prompt.text = "Press SPACE to continue"
+	_tutorial_prompt.modulate.a = 0.0 # Initially hidden
+	_tutorial_prompt.add_theme_color_override("font_outline_color", Color.BLACK)
+	_tutorial_prompt.add_theme_constant_override("outline_size", 4)
+	_tutorial_layer.add_child(_tutorial_prompt)
+	
+	add_child(_tutorial_layer)
+	
+	tutorial_active = true
+	GameState.is_tutorial_active = true
+	get_tree().paused = true
+	_show_tutorial_text()
+
+
+func _show_tutorial_text() -> void:
+	if _tutorial_index >= _tutorial_texts.size():
+		tutorial_active = false
+		GameState.is_tutorial_active = false
+		GameState.tutorial_completed = true
+		if _prompt_tween: _prompt_tween.kill()
+		if _tutorial_layer:
+			_tutorial_layer.queue_free()
+			_tutorial_layer = null
+		get_tree().paused = GameState.is_substrate
+		return
+		
+	if _prompt_tween: _prompt_tween.kill()
+	_tutorial_label.text = _tutorial_texts[_tutorial_index]
+	_tutorial_label.visible_ratio = 0.0
+	_tutorial_prompt.modulate.a = 0.0
+	_tutorial_is_typing = true
+	
+	if _tutorial_index == 2:
+		_tutorial_prompt.text = "Press TAB to continue"
+	else:
+		_tutorial_prompt.text = "Press SPACE to continue"
+	
+	if _tutorial_tween: _tutorial_tween.kill()
+	_tutorial_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	_tutorial_tween.tween_property(_tutorial_label, "visible_ratio", 1.0, _tutorial_label.text.length() * 0.015)
+	_tutorial_tween.finished.connect(_on_tutorial_text_finished)
+
+
+func _on_tutorial_text_finished() -> void:
+	_tutorial_is_typing = false
+	_tutorial_label.visible_ratio = 1.0
+	if _tutorial_prompt:
+		_tutorial_prompt.visible = true
+		_tutorial_prompt.modulate.a = 1.0
+		if _prompt_tween: _prompt_tween.kill()
+		_prompt_tween = create_tween().set_loops()
+		_prompt_tween.tween_property(_tutorial_prompt, "modulate:a", 0.3, 0.6)
+		_prompt_tween.tween_property(_tutorial_prompt, "modulate:a", 1.0, 0.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
 func _process(_delta: float) -> void:
 	if selector:
 		selector.global_position = Grid.grid_to_world(grid_pos + facing_dir)
@@ -73,6 +186,30 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if tutorial_active:
+		if event is InputEventKey and event.pressed and not event.echo:
+			var is_tab_line = (_tutorial_index == 2)
+			var key = event.keycode
+			
+			if _tutorial_is_typing:
+				if key == KEY_SPACE or (is_tab_line and key == KEY_TAB):
+					if _tutorial_tween: _tutorial_tween.kill()
+					_on_tutorial_text_finished()
+					get_viewport().set_input_as_handled()
+			else:
+				if is_tab_line:
+					if key == KEY_TAB:
+						_tutorial_index += 1
+						_show_tutorial_text()
+						# We don't handle input here so it actually toggles the substrate
+				elif key == KEY_SPACE:
+					_tutorial_index += 1
+					_show_tutorial_text()
+					get_viewport().set_input_as_handled()
+		return
+	
+	if get_tree().paused: return
+
 	_handle_dir_stack(event, "move_left", Vector2i(-1, 0))
 	_handle_dir_stack(event, "move_right", Vector2i(1, 0))
 	_handle_dir_stack(event, "move_forward", Vector2i(0, -1))
@@ -278,15 +415,24 @@ func _attempt_move(dir: Vector2i) -> void:
 	var target := grid_pos + dir
 
 	if GameState.is_tile_blocked(target):
-		GameState.undo_stack.pop_back() # Move failed, forget the state
 		_play_anim("Idle")
+		GameState.process_turn()
 		return
 
 	var occupant: Node2D = Grid.get_occupant(target)
 	if occupant != null:
-		if occupant.get("tags") != null and "FRAGILE" in occupant.tags:
+		if occupant.get("tags") != null and "PASSABLE" in occupant.tags:
+			# Just walk over it
+			pass
+		elif occupant.get("tags") != null and "FRAGILE" in occupant.tags:
 			if occupant.has_method("_die"):
 				occupant._die()
+		elif occupant.get("tags") != null and "HARMFUL" in occupant.tags:
+			if occupant.has_method("attack_player"):
+				occupant.attack_player()
+			else:
+				_die()
+			return
 		elif occupant.has_method("push"):
 			if occupant.push(dir):
 				# Success!
@@ -303,7 +449,7 @@ func _attempt_move(dir: Vector2i) -> void:
 	_step_to(target, dir)
 
 	if GameState.has_harmful_at(grid_pos):
-		_die()
+		_die(0.3)
 		return
 
 	GameState.process_turn()
@@ -388,10 +534,24 @@ func _set_flip(flipped: bool) -> void:
 	anim_tool.flip_h = flipped
 
 
-func _die() -> void:
+func _die(death_delay: float = 0.8) -> void:
 	if is_dead:
 		return
 	is_dead = true
+	_cancel_move()
 	GameState.player_died.emit()
-	await get_tree().create_timer(0.4).timeout
+	
+	var fade_layer = CanvasLayer.new()
+	fade_layer.layer = 120
+	var color_rect = ColorRect.new()
+	color_rect.color = Color(0, 0, 0, 0)
+	color_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	fade_layer.add_child(color_rect)
+	get_tree().current_scene.add_child(fade_layer)
+	
+	var tw = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tw.tween_interval(death_delay)
+	tw.tween_property(color_rect, "color:a", 1.0, 0.5)
+	await tw.finished
+	GameState.reset_state()
 	get_tree().reload_current_scene()

@@ -137,7 +137,7 @@ animations = [{
 }],
 "loop": true,
 "name": &"Attack",
-"speed": 5.0
+"speed": 15.0
 }, {
 "frames": [{
 "duration": 1.0,
@@ -166,7 +166,7 @@ animations = [{
 }],
 "loop": true,
 "name": &"Idle",
-"speed": 5.0
+"speed": 15.0
 }, {
 "frames": [{
 "duration": 1.0,
@@ -195,7 +195,7 @@ animations = [{
 }],
 "loop": true,
 "name": &"Walk",
-"speed": 5.0
+"speed": 15.0
 }]
 
 [node name="Goblin" type="Node2D" unique_id=1672792745]
@@ -204,4 +204,4 @@ tags = Array[String](["HARMFUL", "CHASING"])
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1827542009]
 sprite_frames = SubResource("SpriteFrames_v2rmj")
-animation = &"Attack"
+animation = &"Walk"

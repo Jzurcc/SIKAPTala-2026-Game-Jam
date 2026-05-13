@@ -19,7 +19,8 @@ var tag_colors = {
 	"PATROLLING": "#ddaa22",
 	"FLEEING": "#22ffaa",
 	"PUSHING": "#ff8800",
-	"HARMFUL": "#ff0000"
+	"HARMFUL": "#ff0000",
+	"HIDDEN": "#333333"
 }
 
 var _labels: Array[Control] = []

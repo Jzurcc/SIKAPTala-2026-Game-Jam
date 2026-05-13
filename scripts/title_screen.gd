@@ -38,6 +38,7 @@ var next_glitch_time: float = 2.0
 var glitch_bursts_remaining: int = 0
 var shake: float = 0.0
 var bgm_player: AudioStreamPlayer
+var active_glitch_tween: Tween
 
 
 func _ready() -> void:
@@ -71,6 +72,7 @@ func _ready() -> void:
 	
 	bgm_player = AudioStreamPlayer.new()
 	bgm_player.stream = load("res://assets/music/bgm/a-lonely-cherry-tree-bo-2-dny.wav")
+	bgm_player.bus = "BGM"
 	bgm_player.autoplay = true
 	add_child(bgm_player)
 	bgm_player.finished.connect(bgm_player.play)
@@ -121,16 +123,16 @@ func _process(delta: float) -> void:
 			glitch_timer = 0.0
 
 			if glitch_bursts_remaining > 0:
-				next_glitch_time = randf_range(0.1, 0.3)
+				next_glitch_time = randf_range(0.3, 0.6) # longer gap between bursts
 				glitch_bursts_remaining -= 1
 			else:
 				if randf() < 0.35:
 					glitch_bursts_remaining = randi_range(1, 2)
 
-				if randf() < 0.25:
-					next_glitch_time = randf_range(0.4, 1.5)
+				if randf() < 0.15: # less frequent mini-bursts
+					next_glitch_time = randf_range(1.5, 3.0)
 				else:
-					next_glitch_time = randf_range(2.5, 8.0)
+					next_glitch_time = randf_range(4.0, 12.0) # much longer wait between glitch groups
 
 
 func _rand_char() -> String:
@@ -205,11 +207,35 @@ func _ghost_flash() -> void:
 func _trigger_glitch() -> void:
 	if not glitch_mat:
 		return
+		
+	if active_glitch_tween:
+		active_glitch_tween.kill()
+		
 	glitch_mat.set_shader_parameter("radius", 2.0)
-	shake = randf_range(3.0, 6.0)
-	var tw := create_tween()
-	tw.tween_interval(randf_range(0.05, 0.2))
-	tw.tween_callback(func(): if glitch_mat: glitch_mat.set_shader_parameter("radius", 0.0))
+	shake = randf_range(5.0, 10.0)
+	
+	var duration = randf_range(0.15, 0.4)
+	
+	# Audio distortion
+	bgm_player.pitch_scale = randf_range(0.4, 0.7)
+	
+	var bus_idx = AudioServer.get_bus_index("BGM")
+	var lpf: AudioEffectLowPassFilter = null
+	if bus_idx != -1 and AudioServer.get_bus_effect_count(bus_idx) > 0:
+		lpf = AudioServer.get_bus_effect(bus_idx, 0) as AudioEffectLowPassFilter
+	
+	if lpf:
+		lpf.cutoff_hz = 500.0
+	
+	active_glitch_tween = create_tween()
+	active_glitch_tween.tween_interval(duration)
+	active_glitch_tween.tween_callback(func(): 
+		if glitch_mat: glitch_mat.set_shader_parameter("radius", 0.0)
+		bgm_player.pitch_scale = 1.0 # Force return to normal
+		if lpf:
+			lpf.cutoff_hz = 20000.0 # Force return to normal
+		active_glitch_tween = null
+	)
 
 
 func _unhandled_input(event: InputEvent) -> void:

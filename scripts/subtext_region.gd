@@ -91,14 +91,14 @@ func _draw() -> void:
 		draw_rect(h_rect, Color(0.2, 1.0, 0.2, 0.8), false, 1.0)
 
 func get_center_world_pos() -> Vector2:
-	var gx = floori(position.x / TILE_SIZE)
-	var gy = floori(position.y / TILE_SIZE)
+	var gx = floori(global_position.x / TILE_SIZE)
+	var gy = floori(global_position.y / TILE_SIZE)
 	var center_grid = Vector2(gx, gy) + Vector2(highlight_rect.position) + Vector2(highlight_rect.size) / 2.0
 	return Vector2(center_grid.x * TILE_SIZE, center_grid.y * TILE_SIZE)
 
 func get_grid_rect() -> Rect2i:
-	var gx = floori(position.x / TILE_SIZE)
-	var gy = floori(position.y / TILE_SIZE)
+	var gx = floori(global_position.x / TILE_SIZE)
+	var gy = floori(global_position.y / TILE_SIZE)
 	return Rect2i(Vector2i(gx, gy) + tag_rect.position, tag_rect.size)
 
 func set_highlighted(active: bool) -> void:
@@ -115,8 +115,8 @@ func _setup_highlight_sprites() -> void:
 		if is_instance_valid(s): s.queue_free()
 	_highlight_sprites.clear()
 
-	var gx = floori(position.x / TILE_SIZE)
-	var gy = floori(position.y / TILE_SIZE)
+	var gx = floori(global_position.x / TILE_SIZE)
+	var gy = floori(global_position.y / TILE_SIZE)
 	var base_grid_pos = Vector2i(gx, gy)
 
 	var target_layer: TileMapLayer = null

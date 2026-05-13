@@ -125,7 +125,11 @@ func refresh_all_tags() -> void:
 	for obj in GameState.world_objects:
 		if is_instance_valid(obj) and obj.get("tags") != null:
 			for tag in obj.tags:
-				add_wall_tag(obj.grid_pos, tag)
+				var g_size = obj.get("grid_size")
+				if g_size == null: g_size = Vector2i.ONE
+				for x in range(g_size.x):
+					for y in range(g_size.y):
+						add_wall_tag(obj.grid_pos + Vector2i(x, y), tag)
 				
 	# PASS 2: Handle conversions for any newly detected LIGHT tags
 	var targets = wall_tags.keys()
@@ -151,6 +155,14 @@ func _try_convert_to_node(pos: Vector2i) -> void:
 				sprite.texture = source.texture
 				sprite.region_enabled = true
 				sprite.region_rect = source.get_tile_texture_region(atlas_coords)
+				
+				var size_in_atlas = source.get_tile_size_in_atlas(atlas_coords)
+				obj.set("grid_size", size_in_atlas)
+				
+				var tile_data = source.get_tile_data(atlas_coords, 0)
+				var tex_offset = Vector2(tile_data.texture_origin) if tile_data else Vector2.ZERO
+				sprite.position = -tex_offset
+				
 				obj.add_child(sprite)
 
 				obj.position = grid_to_world(pos)

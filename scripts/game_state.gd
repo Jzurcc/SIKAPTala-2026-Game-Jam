@@ -7,6 +7,9 @@ signal player_moved(world_pos: Vector2)
 signal level_won
 
 var is_substrate: bool = false
+var is_tutorial_active: bool = false
+var tutorial_completed: bool = false
+var is_transitioning: bool = false
 var undo_stack: Array[Dictionary] = []
 
 var bgm_player: AudioStreamPlayer
@@ -29,6 +32,7 @@ var solid_tilemaps: Array[TileMapLayer] = []
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
 	
 	transition_layer = CanvasLayer.new()
 	transition_layer.layer = 128
@@ -53,18 +57,29 @@ func start_gameplay_music() -> void:
 	_play_current_bgm()
 
 
-func transition_to_scene(path: String, start_bgm: bool = false) -> void:
-	var tw = create_tween()
+func transition_to_scene(path: String, start_bgm: bool = false, fade_color: Color = Color.BLACK) -> void:
+	if is_transitioning: return
+	is_transitioning = true
+	
+	print("[GameState] Starting transition to: ", path)
+	transition_rect.color = fade_color
+	transition_rect.color.a = 0.0
+	
+	var tw = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tw.tween_property(transition_rect, "color:a", 1.0, 0.8)
 	await tw.finished
+	print("[GameState] Fade out complete, changing scene...")
 	
+	reset_state()
 	get_tree().change_scene_to_file(path)
-	await get_tree().create_timer(2.0).timeout 
+	# Use process_always=true (second arg) so transition doesn't hang if game is paused
+	await get_tree().create_timer(1.0, true).timeout 
+	print("[GameState] Scene changed, fading in...")
 	
 	if start_bgm:
 		start_gameplay_music()
 		
-	tw = create_tween()
+	tw = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tw.tween_property(transition_rect, "color:a", 0.0, 0.8)
 
 
@@ -139,8 +154,14 @@ func reset() -> void:
 
 func toggle_substrate() -> void:
 	is_substrate = !is_substrate
-	get_tree().paused = is_substrate
+	if not is_tutorial_active:
+		get_tree().paused = is_substrate
 	substrate_toggled.emit(is_substrate)
+	
+	if is_substrate:
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	else:
+		Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
 	
 	if lpf_tween:
 		lpf_tween.kill()
@@ -165,6 +186,13 @@ func is_wall_at(pos: Vector2i) -> bool:
 
 
 func is_tile_blocked(pos: Vector2i) -> bool:
+	var global_tags = Grid.get_wall_tags(pos)
+	if "PASSABLE" in global_tags:
+		return false
+	if "IMPASSABLE" in global_tags:
+		return true
+
+	# Check tilemap layers
 	for i in range(solid_tilemaps.size() - 1, -1, -1):
 		var layer = solid_tilemaps[i]
 		if layer.get_cell_source_id(pos) != -1:
@@ -176,6 +204,19 @@ func is_tile_blocked(pos: Vector2i) -> bool:
 			
 			if not is_passable and layer.name.to_lower().contains("wall"):
 				return true
+
+	# Check occupants for inherent blocking (if not already covered by PASSABLE tag)
+	var occupant = Grid.get_occupant(pos)
+	if occupant != null and occupant != player_ref:
+		if occupant.get("tags") != null:
+			if "PASSABLE" in occupant.tags: return false
+			if "IMPASSABLE" in occupant.tags: return true
+		
+		# If it can't be pushed or broken, it blocks by default
+		var has_fragile = occupant.get("tags") != null and "FRAGILE" in occupant.tags
+		if not occupant.has_method("push") and not has_fragile:
+			return true
+			
 	return false
 
 
@@ -268,6 +309,18 @@ func pop_undo_state() -> void:
 			if obj.get("tags") != null:
 				obj.tags.assign(o_data["t"])
 			Grid.occupy(obj.grid_pos, obj)
+
+
+func reset_state() -> void:
+	entities.clear()
+	world_objects.clear()
+	undo_stack.clear()
+	Grid.occupied.clear()
+	Grid.wall_tags.clear()
+	Grid.layer_tags.clear()
+	Grid.regions.clear()
+	player_ref = null
+	is_transitioning = false
 
 
 func process_turn() -> void:
