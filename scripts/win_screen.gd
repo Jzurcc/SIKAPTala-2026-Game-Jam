@@ -13,6 +13,22 @@ var timer: float = 0.0
 func _ready() -> void:
 	options = [yes_label, no_label]
 	base_y = you_win_label.position.y
+	
+	for i in range(options.size()):
+		var lbl: Label = options[i]
+		lbl.mouse_filter = Control.MOUSE_FILTER_STOP
+		lbl.mouse_entered.connect(func():
+			if selected != i:
+				selected = i
+				GameState.play_deselect_sfx()
+				_update_sel()
+		)
+		lbl.gui_input.connect(func(event: InputEvent):
+			if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+				GameState.play_select_sfx()
+				_confirm()
+		)
+
 	_update_sel()
 
 
@@ -24,11 +40,14 @@ func _process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("move_left") or event.is_action_pressed("ui_left"):
 		selected = wrapi(selected - 1, 0, options.size())
+		GameState.play_deselect_sfx()
 		_update_sel()
 	elif event.is_action_pressed("move_right") or event.is_action_pressed("ui_right"):
 		selected = wrapi(selected + 1, 0, options.size())
+		GameState.play_deselect_sfx()
 		_update_sel()
 	elif event.is_action_pressed("interact") or event.is_action_pressed("ui_accept"):
+		GameState.play_select_sfx()
 		_confirm()
 
 

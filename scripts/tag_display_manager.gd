@@ -66,7 +66,11 @@ func _input(event: InputEvent) -> void:
 				pass # Released does nothing in sticky mode
 
 func _on_tag_drag_started(tag: String, index: int) -> void:
-	if "LOCKED" in current_tags: return
+	if "LOCKED" in current_tags: 
+		if hover_label:
+			hover_label.shake_tag("LOCKED")
+		GameState.play_error_sfx()
+		return
 	if last_highlighted == null: return
 
 	if last_highlighted is TileMapLayer:
@@ -75,6 +79,7 @@ func _on_tag_drag_started(tag: String, index: int) -> void:
 		last_highlighted = Grid.isolate_tile_as_region(g_pos, last_highlighted.name)
 
 	is_dragging = true
+	GameState.play_select_sfx()
 	drag_source_pos = Grid.world_to_grid(get_tree().current_scene.get_global_mouse_position())
 	drag_tag = tag
 	drag_index = index
@@ -110,6 +115,7 @@ func _on_tag_drag_started(tag: String, index: int) -> void:
 
 func _cancel_drag() -> void:
 	is_dragging = false
+	GameState.play_deselect_sfx()
 	if drag_visual:
 		drag_visual.queue_free()
 	if hover_label:
@@ -175,6 +181,7 @@ func _perform_swap(source: Node2D, s_idx: int, target: Node2D, t_idx: int) -> vo
 	if "LOCKED" in t_tags:
 		if hover_label:
 			hover_label.shake_tag("LOCKED")
+		GameState.play_error_sfx()
 		_deselect()
 		_clear_highlight()
 		return
