@@ -138,9 +138,14 @@ func _interact() -> void:
 	
 	# 1. Check for Occupant (Beads, WorldObjects)
 	var occupant = Grid.get_occupant(target)
-	if occupant != null and "INTERACTABLE" in occupant.tags:
-		_display_dialogue_for(occupant)
-		return
+	if occupant != null:
+		if occupant.get("tags") != null and "FRAGILE" in occupant.tags:
+			if occupant.has_method("_die"):
+				occupant._die()
+			return
+		if "INTERACTABLE" in occupant.tags:
+			_display_dialogue_for(occupant)
+			return
 		
 	# 2. Check for SubtextRegions (Any layer)
 	var region = Grid.get_region_at(target)
@@ -279,7 +284,10 @@ func _attempt_move(dir: Vector2i) -> void:
 
 	var occupant: Node2D = Grid.get_occupant(target)
 	if occupant != null:
-		if occupant.has_method("push"):
+		if occupant.get("tags") != null and "FRAGILE" in occupant.tags:
+			if occupant.has_method("_die"):
+				occupant._die()
+		elif occupant.has_method("push"):
 			if occupant.push(dir):
 				# Success!
 				pass

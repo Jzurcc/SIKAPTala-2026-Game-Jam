@@ -17,6 +17,10 @@ func _ready() -> void:
 func push(dir: Vector2i) -> bool:
 	if is_moving: return false
 	
+	if "FRAGILE" in tags:
+		_die()
+		return true
+	
 	var target := grid_pos + dir
 
 	if GameState.is_tile_blocked(target):
@@ -24,7 +28,10 @@ func push(dir: Vector2i) -> bool:
 
 	var occupant: Node2D = Grid.get_occupant(target)
 	if occupant != null:
-		if occupant.has_method("push") and occupant.push(dir):
+		if occupant.get("tags") != null and "FRAGILE" in occupant.tags:
+			if occupant.has_method("_die"):
+				occupant._die()
+		elif occupant.has_method("push") and occupant.push(dir):
 			pass
 		else:
 			return false
@@ -60,3 +67,10 @@ func remove_tag(tag: String) -> bool:
 
 func _exit_tree() -> void:
 	Grid.vacate(grid_pos)
+
+
+func _die() -> void:
+	GameState.unregister_object(self)
+	Grid.vacate(grid_pos)
+	Grid.refresh_all_tags()
+	queue_free()

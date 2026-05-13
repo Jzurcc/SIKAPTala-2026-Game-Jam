@@ -54,7 +54,7 @@ func take_turn() -> void:
 func _do_chase() -> void:
 	if GameState.player_ref == null:
 		return
-	var target_pos := GameState.player_ref.grid_pos
+	var target_pos: Vector2i = GameState.player_ref.grid_pos
 	var dir := _dir_toward(target_pos)
 	if dir == Vector2i.ZERO:
 		return
@@ -74,7 +74,7 @@ func _do_patrol() -> void:
 func _do_flee() -> void:
 	if GameState.player_ref == null:
 		return
-	var player_pos := GameState.player_ref.grid_pos
+	var player_pos: Vector2i = GameState.player_ref.grid_pos
 	var dir := _dir_toward(player_pos)
 	var flee_dir := Vector2i(-dir.x, -dir.y)
 	if not _try_move(flee_dir):
@@ -103,7 +103,11 @@ func _try_move(dir: Vector2i) -> bool:
 			else:
 				_play_anim("Idle")
 			return false
-		if "PUSHING" in tags and occupant.has_method("push"):
+			
+		if occupant.get("tags") != null and "FRAGILE" in occupant.tags:
+			if occupant.has_method("_die"):
+				occupant._die()
+		elif "PUSHING" in tags and occupant.has_method("push"):
 			if not occupant.push(dir):
 				_play_anim("Idle")
 				return false
@@ -161,7 +165,7 @@ func _scatter_tags() -> void:
 	var tag_queue := tags.duplicate()
 	for tag in tag_queue:
 		for dir in dirs:
-			var neighbor := grid_pos + dir
+			var neighbor = grid_pos + dir
 			var occ: Node2D = Grid.get_occupant(neighbor)
 			if occ != null and occ.get("tags") != null:
 				if occ.tags.size() < 2 and not tag in occ.tags:
