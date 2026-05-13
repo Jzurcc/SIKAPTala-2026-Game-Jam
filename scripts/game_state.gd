@@ -10,6 +10,9 @@ var is_substrate: bool = false
 var undo_stack: Array[Dictionary] = []
 
 var bgm_player: AudioStreamPlayer
+var sfx_select: AudioStreamPlayer
+var sfx_deselect: AudioStreamPlayer
+var sfx_error: AudioStreamPlayer
 var bgm_playlist: Array[String] = [
 	"res://assets/music/bgm/punky-troll-oxcc-5-u.wav",
 	"res://assets/music/bgm/ooh-a-fly-wait-it-isn-t-tloagd.wav",
@@ -44,6 +47,18 @@ func _ready() -> void:
 	bgm_player.bus = "BGM"
 	add_child(bgm_player)
 	bgm_player.finished.connect(_on_bgm_finished)
+	
+	sfx_select = AudioStreamPlayer.new()
+	sfx_select.stream = load("res://assets/music/sfx/select.wav")
+	add_child(sfx_select)
+
+	sfx_deselect = AudioStreamPlayer.new()
+	sfx_deselect.stream = load("res://assets/music/sfx/deselect.wav")
+	add_child(sfx_deselect)
+
+	sfx_error = AudioStreamPlayer.new()
+	sfx_error.stream = load("res://assets/music/sfx/error.wav")
+	add_child(sfx_error)
 
 
 func start_gameplay_music() -> void:
@@ -51,6 +66,15 @@ func start_gameplay_music() -> void:
 		return
 	bgm_index = 0
 	_play_current_bgm()
+
+func play_select_sfx() -> void:
+	sfx_select.play()
+
+func play_deselect_sfx() -> void:
+	sfx_deselect.play()
+
+func play_error_sfx() -> void:
+	sfx_error.play()
 
 
 func transition_to_scene(path: String, start_bgm: bool = false) -> void:

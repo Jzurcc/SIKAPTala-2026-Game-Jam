@@ -24,11 +24,14 @@ func _process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("move_left") or event.is_action_pressed("ui_left"):
 		selected = wrapi(selected - 1, 0, options.size())
+		GameState.play_deselect_sfx()
 		_update_sel()
 	elif event.is_action_pressed("move_right") or event.is_action_pressed("ui_right"):
 		selected = wrapi(selected + 1, 0, options.size())
+		GameState.play_deselect_sfx()
 		_update_sel()
 	elif event.is_action_pressed("interact") or event.is_action_pressed("ui_accept"):
+		GameState.play_select_sfx()
 		_confirm()
 
 

@@ -7,7 +7,7 @@
 [ext_resource type="Script" uid="uid://c8qyug1wj41uf" path="res://scripts/camera.gd" id="3_y3j0m"]
 [ext_resource type="Script" uid="uid://ugyx3l3d66u2" path="res://scripts/subtext_region.gd" id="6_rurhu"]
 [ext_resource type="Script" uid="uid://dlkcii48b0n8h" path="res://scripts/camera_zone.gd" id="7_kk2rg"]
-[ext_resource type="PackedScene" uid="uid://f87o2q7n6p2y" path="res://scenes/goblin.tscn" id="8_b5spy"]
+
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_b5spy"]
 size = Vector2(112, 48)
@@ -100,5 +100,3 @@ shape = SubResource("RectangleShape2D_b5spy")
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1163729497]
 
-[node name="Goblin" parent="." unique_id=1672792745 instance=ExtResource("8_b5spy")]
-position = Vector2(128, 72)
