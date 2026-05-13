@@ -1,8 +1,15 @@
 extends TileMapLayer
 
-var tags: Array[String] = ["IMPASSABLE", "LOCKED"]
+@export var initial_tags: Array[Grid.TagTypes] = [Grid.TagTypes.LOCKED]
+@export var id: String = ""
+@export var custom_dialogues: Array[String] = []
+var tags: Array[String] = []
 
 func _ready() -> void:
+	var keys = Grid.TagTypes.keys()
+	for t in initial_tags:
+		if t >= 0 and t < keys.size():
+			tags.append(keys[t])
 	print("[LockedWalls] _ready() starting on node: ", name)
 	var cells = get_used_cells()
 	for pos in cells:

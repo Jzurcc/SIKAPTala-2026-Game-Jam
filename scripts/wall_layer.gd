@@ -1,11 +1,15 @@
 extends TileMapLayer
 
 @export var initial_tags: Array[Grid.TagTypes] = [Grid.TagTypes.IMPASSABLE]
+@export var id: String = ""
+@export var custom_dialogues: Array[String] = []
 var tags: Array[String] = []
 
 func _ready() -> void:
+	var keys = Grid.TagTypes.keys()
 	for t in initial_tags:
-		tags.append(Grid.TagTypes.keys()[t])
+		if t >= 0 and t < keys.size():
+			tags.append(keys[t])
 
 	var cells = get_used_cells()
 	for pos in cells:

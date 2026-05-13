@@ -1,7 +1,7 @@
 extends Node
 
 enum TagTypes {
-	IMPASSABLE, LOCKED, PASSABLE, PUSHABLE, FRAGILE, HEAVY, LIGHT
+	IMPASSABLE, LOCKED, PASSABLE, FRAGILE, HEAVY, LIGHT, INTERACTABLE
 }
 
 const TILE_SIZE := 16
@@ -25,11 +25,12 @@ func register_region(region: Node2D) -> void:
 func unregister_region(region: Node2D) -> void:
 	regions.erase(region)
 
-func get_region_at(pos: Vector2i, _check_tags: bool = false) -> Node2D:
+func get_region_at(pos: Vector2i, layer_name: String = "") -> Node2D:
 	for i in range(regions.size() - 1, -1, -1):
 		var region = regions[i]
 		if region.get_grid_rect().has_point(pos):
-			return region
+			if layer_name == "" or region.get_effective_layer_name() == layer_name:
+				return region
 	return null
 
 func world_to_grid(world_pos: Vector2) -> Vector2i:
@@ -67,14 +68,14 @@ func set_wall_tags(pos: Vector2i, tags: Array) -> void:
 
 var world_object_script = preload("res://scripts/world_object.gd")
 
+var _is_refreshing: bool = false
+
 func add_wall_tag(pos: Vector2i, tag: String) -> void:
 	var t: Array = wall_tags.get(pos, [])
 	if not tag in t:
 		t.append(tag)
 	wall_tags[pos] = t
 
-	if tag == "PUSHABLE":
-		_try_convert_to_node(pos)
 
 func add_layer_tag(pos: Vector2i, layer_name: String, tag: String) -> void:
 	if not layer_tags.has(pos):
@@ -88,17 +89,19 @@ func add_layer_tag(pos: Vector2i, layer_name: String, tag: String) -> void:
 
 	add_wall_tag(pos, tag)
 
+
 func clear_layer_tags(pos: Vector2i, layer_name: String) -> void:
 	if layer_tags.has(pos) and layer_tags[pos].has(layer_name):
 		for tag in layer_tags[pos][layer_name]:
 			remove_wall_tag(pos, tag)
 		layer_tags[pos].erase(layer_name)
 
+
 func refresh_all_tags() -> void:
 	wall_tags.clear()
 	layer_tags.clear()
 
-	# 1. Base Layer Tags
+	# PASS 1: Gather all tags
 	for layer in GameState.solid_tilemaps:
 		if is_instance_valid(layer) and layer.get("tags") != null:
 			var cells = layer.get_used_cells()
@@ -106,7 +109,6 @@ func refresh_all_tags() -> void:
 				for tag in layer.tags:
 					add_layer_tag(pos, layer.name, tag)
 
-	# 2. Region Overrides (Isolation)
 	for region in regions:
 		if is_instance_valid(region):
 			var rect = region.get_grid_rect()
@@ -114,15 +116,22 @@ func refresh_all_tags() -> void:
 			for x in range(rect.size.x):
 				for y in range(rect.size.y):
 					var pos = rect.position + Vector2i(x, y)
-					# Clear global layer tags for this cell so Region tags completely override them
-					clear_layer_tags(pos, layer)
+					# Clear tags from ALL layers for this cell in OVERRIDE mode
+					for l in GameState.solid_tilemaps:
+						clear_layer_tags(pos, l.name)
 					for tag in region.tags:
-						add_layer_tag(pos, layer, tag)
+						add_wall_tag(pos, tag)
 
 	for obj in GameState.world_objects:
 		if is_instance_valid(obj) and obj.get("tags") != null:
 			for tag in obj.tags:
 				add_wall_tag(obj.grid_pos, tag)
+				
+	# PASS 2: Handle conversions for any newly detected LIGHT tags
+	var targets = wall_tags.keys()
+	for pos in targets:
+		if "LIGHT" in wall_tags[pos]:
+			_try_convert_to_node(pos)
 
 func _try_convert_to_node(pos: Vector2i) -> void:
 	if is_occupied(pos): return
@@ -136,6 +145,7 @@ func _try_convert_to_node(pos: Vector2i) -> void:
 			if source:
 				var obj = Node2D.new()
 				obj.set_script(world_object_script)
+				obj.z_index = 100 # Visibility fix
 
 				var sprite = Sprite2D.new()
 				sprite.texture = source.texture
@@ -147,14 +157,26 @@ func _try_convert_to_node(pos: Vector2i) -> void:
 				layer.add_sibling(obj)
 
 				if obj.get("tags") != null:
-					obj.tags = wall_tags.get(pos, []).duplicate()
+					obj.tags.assign(wall_tags.get(pos, []))
+
+				# Region Capture: If a region was providing the LIGHT tag, move it to the object
+				for region in regions:
+					if is_instance_valid(region) and region.get_grid_rect().has_point(pos):
+						# Copy ID and Dialogues from the region
+						if region.id != "": obj.id = region.id
+						if region.custom_dialogues.size() > 0:
+							obj.custom_dialogues = region.custom_dialogues.duplicate()
+						
+						if "LIGHT" in region.tags:
+							region.reparent(obj)
+							region.position = Vector2.ZERO
+							break
 
 				layer.set_cell(pos, -1)
-				wall_tags.erase(pos)
 				return
 
 func isolate_tile_as_region(pos: Vector2i, layer_name: String) -> SubtextRegion:
-	var existing = get_region_at(pos)
+	var existing = get_region_at(pos, layer_name)
 	if existing: return existing
 	
 	var region = SubtextRegion.new()

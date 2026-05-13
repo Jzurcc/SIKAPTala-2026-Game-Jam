@@ -2,6 +2,9 @@ extends Node2D
 
 var grid_pos: Vector2i = Vector2i.ZERO
 var tags: Array[String] = []
+var id: String = ""
+var custom_dialogues: Array[String] = []
+var is_moving: bool = false
 
 
 func _ready() -> void:
@@ -12,6 +15,8 @@ func _ready() -> void:
 
 
 func push(dir: Vector2i) -> bool:
+	if is_moving: return false
+	
 	var target := grid_pos + dir
 
 	if GameState.is_tile_blocked(target):
@@ -19,12 +24,21 @@ func push(dir: Vector2i) -> bool:
 
 	var occupant: Node2D = Grid.get_occupant(target)
 	if occupant != null:
-		return false
+		if occupant.has_method("push") and occupant.push(dir):
+			pass
+		else:
+			return false
 
 	Grid.vacate(grid_pos)
 	grid_pos = target
-	position = Grid.grid_to_world(grid_pos)
 	Grid.occupy(grid_pos, self)
+	Grid.refresh_all_tags()
+	
+	var tw = create_tween()
+	is_moving = true
+	tw.tween_property(self, "position", Grid.grid_to_world(grid_pos), 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.finished.connect(func(): is_moving = false)
+	
 	return true
 
 

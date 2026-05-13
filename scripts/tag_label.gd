@@ -1,4 +1,5 @@
 extends Node2D
+class_name TagLabel
 
 signal tag_drag_started(tag: String, index: int)
 
@@ -12,7 +13,13 @@ var tag_colors = {
 	"FRAGILE": "#ffff44",
 	"COLD": "#44ccff",
 	"LIGHT": "#ffffff",
-	"HEAVY": "#aa88ff"
+	"HEAVY": "#aa88ff",
+	"SLEEPING": "#6666ff",
+	"CHASING": "#ff2222",
+	"PATROLLING": "#ddaa22",
+	"FLEEING": "#22ffaa",
+	"PUSHING": "#ff8800",
+	"HARMFUL": "#ff0000"
 }
 
 var _labels: Array[Control] = []
@@ -20,6 +27,7 @@ var _hover_scales: Array[float] = []
 var _target_positions: Array[float] = []
 var _base_widths: Array[float] = []
 var holding_tag: String = ""
+var _pulsating_idx: int = -1
 
 func _ready() -> void:
 	z_index = 110
@@ -102,9 +110,12 @@ func _process(delta: float) -> void:
 				target_scale = 1.4
 				var c = Color(tag_colors.get(holding_tag, "#ffffff"))
 				target_mod = c.lerp(Color.WHITE, 0.3)
-				target_mod.a = 1.0 + (sin(Time.get_ticks_msec() * 0.01) * 0.2) # Subtle pulse
 			else:
 				target_scale = 1.25
+		
+		if i == _pulsating_idx:
+			var p = (sin(Time.get_ticks_msec() * 0.015) + 1.0) / 2.0
+			target_mod.a = lerp(0.2, 0.7, p)
 		
 		_hover_scales[i] = lerp(_hover_scales[i], target_scale, 0.2)
 		_labels[i].modulate = _labels[i].modulate.lerp(target_mod, 0.2)
@@ -213,11 +224,16 @@ func is_mouse_over_label_area(mouse_pos: Vector2) -> bool:
 		
 	return total_rect.grow(2.0).has_point(mouse_pos)
 
+func set_replacement_pulse(index: int) -> void:
+	_pulsating_idx = index
+
 func remove_tag_visual(index: int) -> void:
 	if index < 0 or index >= _labels.size(): return
 	_labels[index].modulate.a = 0.0
 
 func restore_tag_visual(index: int) -> void:
+	if index == _pulsating_idx:
+		_pulsating_idx = -1
 	if index < 0 or index >= _labels.size(): return
 	_labels[index].modulate.a = 1.0
 

@@ -111,7 +111,18 @@ func refresh_tilemaps() -> void:
 func _find_tilemaps_recursive(node: Node) -> void:
 	if node is TileMapLayer:
 		if not node in solid_tilemaps:
-			node.z_index = solid_tilemaps.size() * 10
+			# Auto-attach script if missing
+			if node.get_script() == null:
+				if "Floor" in node.name:
+					node.set_script(load("res://scripts/floor_layer.gd"))
+				else:
+					node.set_script(load("res://scripts/wall_layer.gd"))
+			
+			# Use Z-index 1 for sorting layers, 0 for floors
+			if "Floor" in node.name:
+				node.z_index = 0
+			else:
+				node.z_index = 1
 			solid_tilemaps.append(node)
 	for child in node.get_children():
 		_find_tilemaps_recursive(child)
@@ -141,7 +152,9 @@ func toggle_substrate() -> void:
 			lpf_tween = create_tween()
 			lpf_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 			var target_hz = 600.0 if is_substrate else 20000.0
+			var target_pitch = 0.8 if is_substrate else 1.0
 			lpf_tween.tween_property(effect, "cutoff_hz", target_hz, 0.25).set_trans(Tween.TRANS_SINE)
+			lpf_tween.parallel().tween_property(bgm_player, "pitch_scale", target_pitch, 0.25).set_trans(Tween.TRANS_SINE)
 
 
 func is_wall_at(pos: Vector2i) -> bool:
@@ -237,14 +250,24 @@ func pop_undo_state() -> void:
 				e.tags = edata["t"].duplicate()
 			Grid.occupy(e.grid_pos, e)
 
-	for odata in snap["o"]:
-		var o: Node2D = odata["r"]
-		if is_instance_valid(o):
-			o.grid_pos = odata["pos"]
-			o.position = Grid.grid_to_world(o.grid_pos)
-			if o.get("tags") != null:
-				o.tags = odata["t"].duplicate()
-			Grid.occupy(o.grid_pos, o)
+	for o_data in snap["o"]:
+		var obj: Node2D = o_data["r"]
+		if is_instance_valid(obj):
+			# Reset movement state so they don't slide back after undo
+			if "is_moving" in obj:
+				obj.is_moving = false
+			
+			# Kill any active tweens on the object to snap it back
+			var tweens = get_tree().get_processed_tweens()
+			for t in tweens:
+				if t.is_valid() and t.get_meta("target_node", null) == obj:
+					t.kill()
+
+			obj.grid_pos = o_data["pos"]
+			obj.position = Grid.grid_to_world(obj.grid_pos)
+			if obj.get("tags") != null:
+				obj.tags.assign(o_data["t"])
+			Grid.occupy(obj.grid_pos, obj)
 
 
 func process_turn() -> void:

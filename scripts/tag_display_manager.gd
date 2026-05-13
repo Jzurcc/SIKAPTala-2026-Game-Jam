@@ -1,7 +1,6 @@
 extends Node
 
-var tag_label_script = preload("res://scripts/tag_label.gd")
-var hover_label: Node2D
+var hover_label: TagLabel
 var current_tags: Array = []
 var last_highlighted: Node2D = null
 var tile_highlight_sprite: Sprite2D
@@ -20,7 +19,7 @@ var drag_velocity: Vector2 = Vector2.ZERO
 var last_mouse_pos: Vector2 = Vector2.ZERO
 var _target_world_pos: Vector2 = Vector2.ZERO
 var _last_preview_idx: int = -1
-var _last_preview_label: Node2D = null
+var _last_preview_label: TagLabel = null
 
 
 func _ready() -> void:
@@ -41,8 +40,7 @@ func _ready() -> void:
 	tile_highlight_sprite.visible = false
 	highlight_container.add_child(tile_highlight_sprite)
 
-	hover_label = Node2D.new()
-	hover_label.set_script(tag_label_script)
+	hover_label = TagLabel.new()
 	label_container.add_child(hover_label)
 	hover_label.modulate.a = 0.0
 	hover_label.tag_drag_started.connect(_on_tag_drag_started)
@@ -136,7 +134,7 @@ func _handle_drop(mouse_pos: Vector2) -> void:
 
 	# 2. Fallback to spatial detection if not on a tag
 	if not target_node:
-		var region = Grid.get_region_at(grid_pos)
+		var region = Grid.get_region_at(grid_pos, target_layer.name if target_layer else "")
 		if region and region.is_pixel_opaque(mouse_pos):
 			target_node = region
 
@@ -224,6 +222,8 @@ func _process(delta: float) -> void:
 
 	if is_dragging:
 		_update_dragging_visual(delta)
+	
+	_update_pulsating_highlight(delta)
 
 
 	var scene = get_tree().current_scene
@@ -248,9 +248,7 @@ func _process(delta: float) -> void:
 		if top_layer == null:
 			top_layer = get_hovered_tile_layer(mouse_pos, false)
 
-		var region = Grid.get_region_at(grid_pos, true)
-		if region == null:
-			region = Grid.get_region_at(grid_pos, false)
+		var region = Grid.get_region_at(grid_pos, top_layer.name if top_layer else "")
 
 		if region != null:
 			var target = region.get_effective_layer_name()
@@ -333,7 +331,7 @@ func _update_dragging_visual(delta: float) -> void:
 		
 		if hovered_idx != -1:
 			target_pos = hover_label.get_tag_global_position(hovered_idx)
-			hover_label.remove_tag_visual(hovered_idx)
+			hover_label.set_replacement_pulse(hovered_idx)
 			_last_preview_idx = hovered_idx
 			_last_preview_label = hover_label
 			is_snapping = true
@@ -346,12 +344,22 @@ func _update_dragging_visual(delta: float) -> void:
 
 	var target_rotation = clamp(drag_velocity.x * 0.001, -0.4, 0.4)
 	if is_snapping: target_rotation = 0.0
-	drag_visual.rotation = lerp(drag_visual.rotation, target_rotation, 0.1)
+	drag_visual.rotation = lerp_angle(drag_visual.rotation, target_rotation, 0.2)
 
 	var speed = drag_velocity.length()
 	var target_scale = 1.4 + clamp(speed * 0.0001, 0.0, 0.3)
 	if is_snapping: target_scale = 1.25
 	drag_visual.scale = lerp(drag_visual.scale, Vector2(target_scale, target_scale), 0.1)
+
+func _update_pulsating_highlight(_delta: float) -> void:
+	var p = (sin(Time.get_ticks_msec() * 0.012) + 1.0) / 2.0
+	var alpha = lerp(0.3, 0.8, p)
+	
+	if tile_highlight_sprite.visible:
+		tile_highlight_sprite.modulate.a = alpha
+	
+	if is_instance_valid(last_highlighted) and not last_highlighted is TileMapLayer:
+		last_highlighted.modulate.a = alpha
 
 func get_hovered_tile_layer(mouse_pos: Vector2, check_tags: bool = false) -> TileMapLayer:
 	var grid_pos = Grid.world_to_grid(mouse_pos)
@@ -410,12 +418,13 @@ func _set_highlight(node: Node2D) -> void:
 	if node.has_method("set_highlighted"):
 		node.set_highlighted(true)
 	else:
-		node.modulate = Color(0.7, 0.8, 1.2, 1.0)
+		node.modulate = Color(1.2, 1.2, 1.5, 1.0)
 
 func _clear_highlight() -> void:
 	if is_instance_valid(last_highlighted):
 		if last_highlighted.has_method("set_highlighted"):
 			last_highlighted.set_highlighted(false)
-		else:
-			last_highlighted.modulate = Color.WHITE
+		last_highlighted.modulate = Color.WHITE
+	
+	tile_highlight_sprite.modulate.a = 0.6
 	last_highlighted = null

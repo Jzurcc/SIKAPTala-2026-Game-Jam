@@ -16,6 +16,8 @@ const TILE_SIZE = 16
 
 @export var target_layer_name: String = ""
 @export var tags_enum: Array[Grid.TagTypes] = []
+@export var id: String = ""
+@export var custom_dialogues: Array[String] = []
 var tags: Array[String] = []
 var _highlight_sprites: Array[Sprite2D] = []
 var _sprites_initialized: bool = false
@@ -29,8 +31,10 @@ func get_effective_layer_name() -> String:
 	return "SubtextRegion"
 
 func _ready() -> void:
+	var keys = Grid.TagTypes.keys()
 	for t in tags_enum:
-		tags.append(Grid.TagTypes.keys()[t])
+		if t >= 0 and t < keys.size():
+			tags.append(keys[t])
 
 	_snap_to_grid()
 

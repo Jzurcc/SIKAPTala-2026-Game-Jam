@@ -1,25 +1,40 @@
 extends Node2D
 
+@export var id: String = ""
+@export var custom_dialogues: Array[String] = []
 var grid_pos: Vector2i = Vector2i.ZERO
-var tags: Array[String] = []
+@export var tags: Array[String] = []
 var patrol_path: Array[Vector2i] = []
 var patrol_index: int = 0
 var queued_turns: int = 0
 var is_alive: bool = true
 
+var anim: AnimatedSprite2D
 
 func _ready() -> void:
+	for child in get_children():
+		if child is AnimatedSprite2D:
+			anim = child
+			break
+			
 	grid_pos = Grid.world_to_grid(position)
 	position = Grid.grid_to_world(grid_pos)
 	Grid.occupy(grid_pos, self)
 	GameState.register_entity(self)
 	GameState.substrate_toggled.connect(_on_substrate_toggled)
+	_play_anim("Idle")
+
+
+func _play_anim(anim_name: String) -> void:
+	if anim and anim.sprite_frames and anim.sprite_frames.has_animation(anim_name):
+		anim.play(anim_name)
 
 
 func take_turn() -> void:
 	if not is_alive:
 		return
 	if "SLEEPING" in tags:
+		_play_anim("Idle")
 		return
 
 	if queued_turns > 0:
@@ -32,6 +47,8 @@ func take_turn() -> void:
 		_do_patrol()
 	elif "FLEEING" in tags:
 		_do_flee()
+	else:
+		_play_anim("Idle")
 
 
 func _do_chase() -> void:
@@ -68,20 +85,30 @@ func _do_flee() -> void:
 
 
 func _try_move(dir: Vector2i) -> bool:
+	if dir.x < 0 and anim: anim.flip_h = true
+	elif dir.x > 0 and anim: anim.flip_h = false
+
 	var target := grid_pos + dir
 
 	if GameState.is_tile_blocked(target):
+		_play_anim("Idle")
 		return false
 
 	var occupant: Node2D = Grid.get_occupant(target)
 	if occupant != null:
 		if occupant == GameState.player_ref:
 			if "HARMFUL" in tags:
+				_play_anim("Attack")
 				GameState.player_ref._die()
+			else:
+				_play_anim("Idle")
 			return false
 		if "PUSHING" in tags and occupant.has_method("push"):
-			occupant.push(dir)
+			if not occupant.push(dir):
+				_play_anim("Idle")
+				return false
 		else:
+			_play_anim("Idle")
 			return false
 
 	if "FRAGILE" in tags:
@@ -90,8 +117,12 @@ func _try_move(dir: Vector2i) -> bool:
 
 	Grid.vacate(grid_pos)
 	grid_pos = target
-	position = Grid.grid_to_world(grid_pos)
 	Grid.occupy(grid_pos, self)
+	
+	_play_anim("Walk")
+	var tw = create_tween()
+	tw.tween_property(self, "position", Grid.grid_to_world(grid_pos), 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.finished.connect(func(): _play_anim("Idle"))
 
 	if GameState.is_tile_blocked(grid_pos):
 		if "FRAGILE" in tags:
@@ -102,6 +133,7 @@ func _try_move(dir: Vector2i) -> bool:
 
 
 func _check_harmful_tile() -> void:
+
 	var wt := Grid.get_wall_tags(grid_pos)
 	if "HARMFUL" in wt:
 		_die()
@@ -155,6 +187,10 @@ func remove_tag(tag: String) -> bool:
 		return false
 	tags.erase(tag)
 	return true
+
+
+func update_tags(new_tags: Array) -> void:
+	tags.assign(new_tags)
 
 
 func _on_substrate_toggled(active: bool) -> void:
