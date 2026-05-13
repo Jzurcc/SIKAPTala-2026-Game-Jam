@@ -29,6 +29,7 @@ var _tutorial_texts: Array[String] = [
 	"Most people walk through the world without reading it.",
 	"You have always read everything.",
 	"Press TAB to perceive the Subtext.",
+	"Hover over any object to view its tags.",
 	"You can rearrange the words of this world.",
 	"Click a tag to hold it, and drop it onto another object's tag.",
 	"Press E to interact with your surroundings.",
