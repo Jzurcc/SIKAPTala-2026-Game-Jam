@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://f87o2q7n6p2y"]
 
-[ext_resource type="Script" uid="uid://cocwggol2bbr0" path="res://scripts/entity.gd" id="1_76chb"]
+[ext_resource type="Script" uid="uid://cocwggol2bbr0" path="res://scripts/entities/entity.gd" id="1_76chb"]
 [ext_resource type="Texture2D" uid="uid://cpx2oenv0e5yk" path="res://assets/sprites/World/Characters/Goblin/spr_attack_strip10.png" id="2_g1p1y"]
 [ext_resource type="Texture2D" uid="uid://bpvgq5llmos5v" path="res://assets/sprites/World/Characters/Goblin/spr_idle_strip9.png" id="3_lkl8q"]
 [ext_resource type="Texture2D" uid="uid://c2y8x3eew3151" path="res://assets/sprites/World/Characters/Goblin/spr_walk_strip8.png" id="4_yyaat"]

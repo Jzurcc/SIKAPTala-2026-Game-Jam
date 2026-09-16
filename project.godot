@@ -21,13 +21,13 @@ buses/default_bus_layout="uid://camvcu5bqud8p"
 
 [autoload]
 
-Grid="*res://scripts/grid.gd"
-GameState="*res://scripts/game_state.gd"
-SubtextOverlay="*res://scripts/subtext_overlay.gd"
-TagDisplayManager="*res://scripts/tag_display_manager.gd"
-AudioManager="*res://scripts/audio_manager.gd"
-SceneManager="*res://scripts/scene_manager.gd"
-TileConverter="*res://scripts/tile_converter.gd"
+Grid="*res://scripts/core/grid.gd"
+GameState="*res://scripts/core/game_state.gd"
+SubtextOverlay="*res://scripts/ui/subtext_overlay.gd"
+TagDisplayManager="*res://scripts/ui/tag_display_manager.gd"
+AudioManager="*res://scripts/services/audio_manager.gd"
+SceneManager="*res://scripts/services/scene_manager.gd"
+TileConverter="*res://scripts/services/tile_converter.gd"
 
 [display]
 

@@ -7,7 +7,7 @@ extends Node
 ## Registered as autoload "TileConverter" in project.godot.
 ## Phase 7: Also tracks dirty cells for undo restoration.
 
-var _world_object_script = preload("res://scripts/world_object.gd")
+var _world_object_script = preload("res://scripts/objects/world_object.gd")
 
 ## Dirty cell tracker for undo support (Phase 7).
 ## Maps Vector2i -> {layer_name: String, source_id: int, atlas_coords: Vector2i}

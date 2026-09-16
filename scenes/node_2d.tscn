@@ -2,7 +2,7 @@
 
 [ext_resource type="Texture2D" uid="uid://c5x41tp7lbr0x" path="res://assets/sprites/World/Tileset/spr_tileset_sunnysideworld_16px.png" id="1_04qyp"]
 [ext_resource type="PackedScene" path="res://scenes/player.tscn" id="2_4dvvg"]
-[ext_resource type="Script" path="res://scripts/camera.gd" id="3_rnjyy"]
+[ext_resource type="Script" path="res://scripts/objects/camera.gd" id="3_rnjyy"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_dubn7"]
 texture = ExtResource("1_04qyp")

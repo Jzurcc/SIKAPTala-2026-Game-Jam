@@ -2,12 +2,12 @@
 
 [ext_resource type="TileSet" uid="uid://3e1s2qr6us1g" path="res://tileset.tres" id="1_ycayy"]
 [ext_resource type="PackedScene" uid="uid://b0gkamsn4tty2" path="res://scenes/player.tscn" id="2_bw6k5"]
-[ext_resource type="Script" uid="uid://cfj0faj0iytnw" path="res://scripts/tagged_tile_layer.gd" id="2_rurhu"]
-[ext_resource type="Script" uid="uid://d84ymd2q602r" path="res://scripts/tagged_tile_layer.gd" id="3_rurhu"]
-[ext_resource type="Script" uid="uid://c8qyug1wj41uf" path="res://scripts/camera.gd" id="3_y3j0m"]
-[ext_resource type="Script" uid="uid://ugyx3l3d66u2" path="res://scripts/subtext_region.gd" id="6_rurhu"]
-[ext_resource type="Script" uid="uid://dlkcii48b0n8h" path="res://scripts/camera_zone.gd" id="7_kk2rg"]
-[ext_resource type="Script" uid="uid://bw2muqrhk82u2" path="res://scripts/level_exit.gd" id="8_b5spy"]
+[ext_resource type="Script" uid="uid://cfj0faj0iytnw" path="res://scripts/objects/tagged_tile_layer.gd" id="2_rurhu"]
+[ext_resource type="Script" uid="uid://d84ymd2q602r" path="res://scripts/objects/tagged_tile_layer.gd" id="3_rurhu"]
+[ext_resource type="Script" uid="uid://c8qyug1wj41uf" path="res://scripts/objects/camera.gd" id="3_y3j0m"]
+[ext_resource type="Script" uid="uid://ugyx3l3d66u2" path="res://scripts/objects/subtext_region.gd" id="6_rurhu"]
+[ext_resource type="Script" uid="uid://dlkcii48b0n8h" path="res://scripts/objects/camera_zone.gd" id="7_kk2rg"]
+[ext_resource type="Script" uid="uid://bw2muqrhk82u2" path="res://scripts/objects/level_exit.gd" id="8_b5spy"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_b5spy"]
 size = Vector2(112, 48)

@@ -3,7 +3,7 @@ extends Node
 ## Manages hover detection, tag display, and substrate highlight orchestration.
 ## Delegates drag and drop mechanics to DragController (Phase 6).
 
-const DragControllerScript = preload("res://scripts/drag_controller.gd")
+const DragControllerScript = preload("res://scripts/ui/drag_controller.gd")
 
 var hover_label: TagLabel
 var current_tags: Array = []

@@ -139,7 +139,7 @@ func refresh_all_tags() -> void:
 
 
 # --- LEGACY: Remove in Phase 4 when TileConverter is created ---
-var _world_object_script = preload("res://scripts/world_object.gd")
+var _world_object_script = preload("res://scripts/objects/world_object.gd")
 
 func _legacy_try_convert_to_node(pos: Vector2i) -> void:
 	if is_occupied(pos): return
