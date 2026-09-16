@@ -76,8 +76,9 @@ func handle_input(event: InputEvent) -> bool:
 		return false
 
 	if event is InputEventKey and event.pressed and not event.echo:
-		var is_tab_line := (_tutorial_index == 2)
-		var key := event.keycode
+		var key_event: InputEventKey = event as InputEventKey
+		var is_tab_line: bool = (_tutorial_index == 2)
+		var key: Key = key_event.keycode
 
 		if _tutorial_is_typing:
 			if key == KEY_SPACE or (is_tab_line and key == KEY_TAB):

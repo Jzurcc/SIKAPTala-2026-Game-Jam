@@ -3,6 +3,8 @@ extends Node
 ## Manages hover detection, tag display, and substrate highlight orchestration.
 ## Delegates drag and drop mechanics to DragController (Phase 6).
 
+const DragControllerScript = preload("res://scripts/drag_controller.gd")
+
 var hover_label: TagLabel
 var current_tags: Array = []
 var last_highlighted: Node2D = null
@@ -19,7 +21,7 @@ var drag: DragController
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
-	drag = DragController.new()
+	drag = DragControllerScript.new()
 	add_child(drag)
 	drag.swap_completed.connect(_on_swap_completed)
 
@@ -61,7 +63,8 @@ func _input(event: InputEvent) -> void:
 		return
 
 	if event is InputEventMouseButton:
-		var mouse_pos := get_tree().current_scene.get_global_mouse_position()
+		var current_sc: Node = get_tree().current_scene
+		var mouse_pos: Vector2 = (current_sc as Node2D).get_global_mouse_position() if current_sc is Node2D else Vector2.ZERO
 
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 			if drag.is_dragging:
@@ -79,12 +82,14 @@ func _on_tag_drag_started(tag: String, index: int) -> void:
 	if last_highlighted == null:
 		return
 
+	var current_sc: Node = get_tree().current_scene
+	var m_pos: Vector2 = (current_sc as Node2D).get_global_mouse_position() if current_sc is Node2D else Vector2.ZERO
+
 	if last_highlighted is TileMapLayer:
-		var m_pos := get_tree().current_scene.get_global_mouse_position()
-		var g_pos := Grid.world_to_grid(m_pos)
+		var g_pos: Vector2i = Grid.world_to_grid(m_pos)
 		last_highlighted = Grid.isolate_tile_as_region(g_pos, last_highlighted.name)
 
-	var source_pos := Grid.world_to_grid(get_tree().current_scene.get_global_mouse_position())
+	var source_pos: Vector2i = Grid.world_to_grid(m_pos)
 	drag.begin_drag(tag, index, last_highlighted, source_pos, label_container, hover_label)
 
 
@@ -117,11 +122,11 @@ func _process(delta: float) -> void:
 
 	_update_pulsating_highlight(delta)
 
-	var scene := get_tree().current_scene
-	if not scene:
+	var scene: Node = get_tree().current_scene
+	if not scene or not (scene is Node2D):
 		return
 
-	var mouse_pos := scene.get_global_mouse_position()
+	var mouse_pos: Vector2 = (scene as Node2D).get_global_mouse_position()
 
 	var tags: Array = []
 	var has_content: bool = false
@@ -134,7 +139,7 @@ func _process(delta: float) -> void:
 		tags = current_tags.duplicate()
 		has_content = true
 	else:
-		var grid_pos := Grid.world_to_grid(mouse_pos)
+		var grid_pos: Vector2i = Grid.world_to_grid(mouse_pos)
 		var top_layer: TileMapLayer = get_hovered_tile_layer(mouse_pos, true)
 		if top_layer == null:
 			top_layer = get_hovered_tile_layer(mouse_pos, false)
@@ -193,18 +198,18 @@ func _process(delta: float) -> void:
 			hover_label.remove_tag_visual(drag.drag_index)
 
 		hover_label.global_position = hover_label.global_position.lerp(_target_world_pos, 0.15)
-		hover_label.modulate.a = lerp(hover_label.modulate.a, 1.0, 0.2)
+		hover_label.modulate.a = lerpf(hover_label.modulate.a, 1.0, 0.2)
 	else:
 		if is_selected:
 			_deselect()
-		hover_label.modulate.a = lerp(hover_label.modulate.a, 0.0, 0.3)
+		hover_label.modulate.a = lerpf(hover_label.modulate.a, 0.0, 0.3)
 		if hover_label.modulate.a < 0.05:
 			current_tags = []
 
 
 func _update_pulsating_highlight(_delta: float) -> void:
-	var p := (sin(Time.get_ticks_msec() * 0.012) + 1.0) / 2.0
-	var alpha := lerp(0.3, 0.8, p)
+	var p: float = (sin(Time.get_ticks_msec() * 0.012) + 1.0) / 2.0
+	var alpha: float = lerpf(0.3, 0.8, p)
 
 	if tile_highlight_sprite.visible:
 		tile_highlight_sprite.modulate.a = alpha
@@ -214,9 +219,9 @@ func _update_pulsating_highlight(_delta: float) -> void:
 
 
 func get_hovered_tile_layer(mouse_pos: Vector2, check_tags: bool = false) -> TileMapLayer:
-	var grid_pos := Grid.world_to_grid(mouse_pos)
+	var grid_pos: Vector2i = Grid.world_to_grid(mouse_pos)
 	for i in range(GameState.solid_tilemaps.size() - 1, -1, -1):
-		var layer := GameState.solid_tilemaps[i]
+		var layer: TileMapLayer = GameState.solid_tilemaps[i]
 
 		if check_tags:
 			if not Grid.layer_tags.has(grid_pos) or not Grid.layer_tags[grid_pos].has(layer.name):
@@ -229,10 +234,10 @@ func get_hovered_tile_layer(mouse_pos: Vector2, check_tags: bool = false) -> Til
 
 
 func _highlight_layer_tile(layer: TileMapLayer, pos: Vector2i) -> void:
-	var source_id := layer.get_cell_source_id(pos)
+	var source_id: int = layer.get_cell_source_id(pos)
 	if source_id != -1:
-		var atlas_coords := layer.get_cell_atlas_coords(pos)
-		var source: TileSetAtlasSource = layer.tile_set.get_source(source_id)
+		var atlas_coords: Vector2i = layer.get_cell_atlas_coords(pos)
+		var source: TileSetAtlasSource = layer.tile_set.get_source(source_id) as TileSetAtlasSource
 		if source:
 			tile_highlight_sprite.texture = source.texture
 			tile_highlight_sprite.region_rect = source.get_tile_texture_region(atlas_coords)

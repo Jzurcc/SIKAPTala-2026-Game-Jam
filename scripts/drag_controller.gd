@@ -37,14 +37,14 @@ func begin_drag(tag: String, index: int, source_node: Node2D, source_pos: Vector
 	drag_visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	drag_visual.z_index = 200
 
-	var font = load("res://assets/sprites/World/Fonts/Kenney Mini.ttf")
+	var font: Font = load("res://assets/sprites/World/Fonts/Kenney Mini.ttf")
 	if font:
 		drag_visual.add_theme_font_override("normal_font", font)
 	drag_visual.add_theme_font_size_override("normal_font_size", 5)
 	drag_visual.add_theme_constant_override("outline_size", 2)
 	drag_visual.add_theme_color_override("outline_color", Color.BLACK)
 
-	var color = hover_label.tag_colors.get(tag, "#ffffff") if hover_label else "#ffffff"
+	var color: String = hover_label.tag_colors.get(tag, "#ffffff") if hover_label else "#ffffff"
 	drag_visual.text = "[center][color=" + color + "][" + tag + "][/color][/center]"
 
 	container.add_child(drag_visual)
@@ -53,12 +53,18 @@ func begin_drag(tag: String, index: int, source_node: Node2D, source_pos: Vector
 	drag_visual.pivot_offset = drag_visual.size / 2.0
 	drag_visual.scale = Vector2(0.5, 0.5)
 
-	var pop := create_tween()
+	var pop: Tween = create_tween()
 	pop.tween_property(drag_visual, "scale", Vector2(1.4, 1.4), 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 	if hover_label:
 		hover_label.remove_tag_visual(index)
-	last_mouse_pos = get_tree().current_scene.get_global_mouse_position()
+
+	var current_sc: Node = get_tree().current_scene
+	if current_sc is Node2D:
+		last_mouse_pos = (current_sc as Node2D).get_global_mouse_position()
+	else:
+		last_mouse_pos = Vector2.ZERO
+
 	drag_started.emit(tag, index)
 
 
@@ -85,16 +91,17 @@ func update_visual(delta: float, is_selected: bool, hover_label: TagLabel) -> vo
 	if not is_dragging or not drag_visual:
 		return
 
-	var mouse_pos := get_tree().current_scene.get_global_mouse_position()
-	var velocity := (mouse_pos - last_mouse_pos) / maxf(delta, 0.0001)
+	var current_sc: Node = get_tree().current_scene
+	var mouse_pos: Vector2 = (current_sc as Node2D).get_global_mouse_position() if current_sc is Node2D else Vector2.ZERO
+	var velocity: Vector2 = (mouse_pos - last_mouse_pos) / maxf(delta, 0.0001)
 	drag_velocity = drag_velocity.lerp(velocity, 0.1)
 	last_mouse_pos = mouse_pos
 
-	var target_pos := mouse_pos
-	var is_snapping := false
+	var target_pos: Vector2 = mouse_pos
+	var is_snapping: bool = false
 
 	if is_selected and hover_label:
-		var hovered_idx := hover_label.get_hovered_tag_index(mouse_pos, false)
+		var hovered_idx: int = hover_label.get_hovered_tag_index(mouse_pos, false)
 
 		if _last_preview_label != hover_label or _last_preview_idx != hovered_idx:
 			if is_instance_valid(_last_preview_label):
@@ -109,19 +116,19 @@ func update_visual(delta: float, is_selected: bool, hover_label: TagLabel) -> vo
 			_last_preview_label = hover_label
 			is_snapping = true
 
-	var center_offset := drag_visual.size / 2.0
+	var center_offset: Vector2 = drag_visual.size / 2.0
 	drag_visual.pivot_offset = center_offset
 
-	var lerp_speed := 0.6 if is_snapping else 0.3
+	var lerp_speed: float = 0.6 if is_snapping else 0.3
 	drag_visual.global_position = drag_visual.global_position.lerp(target_pos - center_offset, lerp_speed)
 
-	var target_rotation := clampf(drag_velocity.x * 0.001, -0.4, 0.4)
+	var target_rotation: float = clampf(drag_velocity.x * 0.001, -0.4, 0.4)
 	if is_snapping:
 		target_rotation = 0.0
 	drag_visual.rotation = lerp_angle(drag_visual.rotation, target_rotation, 0.2)
 
-	var speed := drag_velocity.length()
-	var target_scale := 1.4 + clampf(speed * 0.0001, 0.0, 0.3)
+	var speed: float = drag_velocity.length()
+	var target_scale: float = 1.4 + clampf(speed * 0.0001, 0.0, 0.3)
 	if is_snapping:
 		target_scale = 1.25
 	drag_visual.scale = lerp(drag_visual.scale, Vector2(target_scale, target_scale), 0.1)
@@ -131,7 +138,7 @@ func handle_drop(mouse_pos: Vector2, hover_label: TagLabel, last_highlighted: No
 	if not is_dragging:
 		return
 
-	var grid_pos := Grid.world_to_grid(mouse_pos)
+	var grid_pos: Vector2i = Grid.world_to_grid(mouse_pos)
 	var target_layer: TileMapLayer = get_hovered_tile_layer_fn.call(mouse_pos, true)
 	if target_layer == null:
 		target_layer = get_hovered_tile_layer_fn.call(mouse_pos, false)
@@ -143,12 +150,12 @@ func handle_drop(mouse_pos: Vector2, hover_label: TagLabel, last_highlighted: No
 
 	# 2. Fallback to spatial detection if not on a tag
 	if not target_node:
-		var region = Grid.get_region_at(grid_pos, target_layer.name if target_layer else "")
-		if region and region.is_pixel_opaque(mouse_pos):
+		var region: Node2D = Grid.get_region_at(grid_pos, target_layer.name if target_layer else "")
+		if region and region.has_method("is_pixel_opaque") and region.is_pixel_opaque(mouse_pos):
 			target_node = region
 
 	if not target_node:
-		var occ = Grid.get_occupant(grid_pos)
+		var occ: Node2D = Grid.get_occupant(grid_pos)
 		if occ and occ != GameState.player_ref:
 			target_node = occ
 
@@ -157,7 +164,7 @@ func handle_drop(mouse_pos: Vector2, hover_label: TagLabel, last_highlighted: No
 			target_node = target_layer
 
 	if target_node and target_node != drag_source_node:
-		var target_idx := hover_label.get_hovered_tag_index(mouse_pos, false) if hover_label else -1
+		var target_idx: int = hover_label.get_hovered_tag_index(mouse_pos, false) if hover_label else -1
 		if target_idx == -1:
 			target_idx = 0
 		perform_swap(drag_source_node, drag_index, target_node, target_idx, hover_label)
@@ -173,8 +180,9 @@ func perform_swap(source: Node2D, s_idx: int, target: Node2D, t_idx: int, hover_
 		source = Grid.isolate_tile_as_region(drag_source_pos, source.name)
 
 	if target is TileMapLayer:
-		var m_pos := get_tree().current_scene.get_global_mouse_position()
-		var g_pos := Grid.world_to_grid(m_pos)
+		var current_sc: Node = get_tree().current_scene
+		var m_pos: Vector2 = (current_sc as Node2D).get_global_mouse_position() if current_sc is Node2D else Vector2.ZERO
+		var g_pos: Vector2i = Grid.world_to_grid(m_pos)
 		target = Grid.isolate_tile_as_region(g_pos, target.name)
 
 	GameState.push_undo_state()
@@ -195,8 +203,8 @@ func perform_swap(source: Node2D, s_idx: int, target: Node2D, t_idx: int, hover_
 	if t_idx < 0 or t_idx >= t_tags.size():
 		return
 
-	var tag_to_move = s_tags[s_idx]
-	var tag_from_target = t_tags[t_idx]
+	var tag_to_move: String = str(s_tags[s_idx])
+	var tag_from_target: String = str(t_tags[t_idx])
 
 	s_tags[s_idx] = tag_from_target
 	t_tags[t_idx] = tag_to_move

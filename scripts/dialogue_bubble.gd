@@ -15,7 +15,7 @@ func _ready() -> void:
 
 func _setup_dialogue_ui() -> void:
 	_dialogue_label = Label.new()
-	var font = load("res://assets/sprites/World/Fonts/Kenney Mini.ttf")
+	var font: Font = load("res://assets/sprites/World/Fonts/Kenney Mini.ttf")
 	if font:
 		_dialogue_label.add_theme_font_override("font", font)
 	_dialogue_label.add_theme_font_size_override("font_size", 6)
@@ -29,12 +29,12 @@ func _setup_dialogue_ui() -> void:
 
 func _process(_delta: float) -> void:
 	if _dialogue_label and _dialogue_label.modulate.a > 0.0:
-		var sway = sin(Time.get_ticks_msec() * 0.004) * 1.5
-		_dialogue_label.position.y = 14 + sway
+		var sway: float = sin(Time.get_ticks_msec() * 0.004) * 1.5
+		_dialogue_label.position.y = 14.0 + sway
 
 
 func show_for(object: Object) -> void:
-	var text := _get_dialogue_text(object)
+	var text: String = _get_dialogue_text(object)
 
 	if _dialogue_tween:
 		_dialogue_tween.kill()
@@ -44,22 +44,23 @@ func show_for(object: Object) -> void:
 
 	_dialogue_tween = create_tween()
 	# Fast typewriter effect (approx 0.02s per character)
-	_dialogue_tween.tween_property(_dialogue_label, "visible_ratio", 1.0, text.length() * 0.02)
+	_dialogue_tween.tween_property(_dialogue_label, "visible_ratio", 1.0, float(text.length()) * 0.02)
 	_dialogue_tween.tween_interval(1.5)
 	_dialogue_tween.tween_property(_dialogue_label, "modulate:a", 0.0, 0.5)
 
 
 func _get_dialogue_text(object: Object) -> String:
-	var raw_text := ""
+	var raw_text: String = ""
 
 	# 1. Check for custom dialogues set in the inspector (Randomized, no repeats)
 	if "custom_dialogues" in object and not object.custom_dialogues.is_empty():
 		raw_text = _pick_random_dialogue(object)
 	# 2. Inherit from base layer if it's a SubtextRegion
 	elif object is SubtextRegion:
-		var layer_name: String = object.get_effective_layer_name()
+		var subregion: SubtextRegion = object as SubtextRegion
+		var layer_name: String = subregion.get_effective_layer_name()
 		var layer: TileMapLayer = null
-		for l in GameState.solid_tilemaps:
+		for l: TileMapLayer in GameState.solid_tilemaps:
 			if l.name == layer_name:
 				layer = l
 				break
@@ -80,23 +81,24 @@ func _get_dialogue_text(object: Object) -> String:
 
 		# Fallback for objects with tags
 		if raw_text == "" and object.get("tags") != null and object.tags.size() > 0:
-			var tag_str := ", ".join(object.tags)
+			var tag_str: String = ", ".join(object.tags)
 			raw_text = "It's " + tag_str + "."
 
 		# Fallback for SubtextRegions
 		if raw_text == "" and object is SubtextRegion:
-			var layer := object.get_effective_layer_name()
-			if "Wall" in layer:
+			var subregion: SubtextRegion = object as SubtextRegion
+			var region_layer: String = subregion.get_effective_layer_name()
+			if "Wall" in region_layer:
 				raw_text = "It's a wall..."
-			elif "Floor" in layer:
+			elif "Floor" in region_layer:
 				raw_text = "It's a floor..."
 
 	if raw_text == "":
 		raw_text = "I don't see anything special about this."
 
 	# Pre-wrap the text manually to avoid "jumping" layout during typewriter effect
-	var font = _dialogue_label.get_theme_font("font")
-	var font_size = _dialogue_label.get_theme_font_size("font_size")
+	var font: Font = _dialogue_label.get_theme_font("font")
+	var font_size: int = _dialogue_label.get_theme_font_size("font_size")
 	if font:
 		return _wrap_text(raw_text, font, font_size, 100.0)
 
@@ -108,9 +110,9 @@ func _pick_random_dialogue(object: Object) -> String:
 	if dialogues.size() == 1:
 		return dialogues[0]
 
-	var obj_id := object.get_instance_id()
+	var obj_id: int = object.get_instance_id()
 	var last_idx: int = _last_dialogue_indices.get(obj_id, -1)
-	var new_idx := randi() % dialogues.size()
+	var new_idx: int = randi() % dialogues.size()
 	while new_idx == last_idx:
 		new_idx = randi() % dialogues.size()
 
@@ -119,14 +121,13 @@ func _pick_random_dialogue(object: Object) -> String:
 
 
 func _wrap_text(text: String, font: Font, font_size: int, width: float) -> String:
-	var wrapped := ""
-	var lines := []
-	var words := text.split(" ")
-	var current_line := ""
+	var lines: Array[String] = []
+	var words: PackedStringArray = text.split(" ")
+	var current_line: String = ""
 
-	for word in words:
-		var test_line := current_line + (" " if current_line != "" else "") + word
-		var size := font.get_string_size(test_line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+	for word: String in words:
+		var test_line: String = current_line + (" " if current_line != "" else "") + word
+		var size: Vector2 = font.get_string_size(test_line, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 
 		if size.x > width and current_line != "":
 			lines.append(current_line)

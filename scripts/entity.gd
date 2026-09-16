@@ -55,15 +55,15 @@ func _do_chase() -> void:
 		_play_anim("Idle")
 		return
 	var target_pos: Vector2i = GameState.player_ref.get("grid_pos")
-	if target_pos:
+	if target_pos != Vector2i.ZERO or GameState.player_ref.grid_pos == Vector2i.ZERO:
 		_move_entity(_dir_toward(target_pos))
 
 
 func _do_patrol() -> void:
 	if patrol_path.is_empty():
 		return
-	var next := patrol_path[patrol_index]
-	var dir := _dir_toward(next)
+	var next: Vector2i = patrol_path[patrol_index]
+	var dir: Vector2i = _dir_toward(next)
 	if _move_entity(dir):
 		if grid_pos == next:
 			patrol_index = (patrol_index + 1) % patrol_path.size()
@@ -73,13 +73,11 @@ func _do_flee() -> void:
 	if GameState.player_ref == null:
 		return
 	var player_pos: Vector2i = GameState.player_ref.get("grid_pos")
-	if not player_pos:
-		return
-	var dir := _dir_toward(player_pos)
-	var flee_dir := Vector2i(-dir.x, -dir.y)
+	var dir: Vector2i = _dir_toward(player_pos)
+	var flee_dir: Vector2i = Vector2i(-dir.x, -dir.y)
 	if not _move_entity(flee_dir):
-		var perp_a := Vector2i(-flee_dir.y, flee_dir.x)
-		var perp_b := Vector2i(flee_dir.y, -flee_dir.x)
+		var perp_a: Vector2i = Vector2i(-flee_dir.y, flee_dir.x)
+		var perp_b: Vector2i = Vector2i(flee_dir.y, -flee_dir.x)
 		if not _move_entity(perp_a):
 			_move_entity(perp_b)
 
@@ -88,10 +86,12 @@ func _move_entity(dir: Vector2i) -> bool:
 	if dir == Vector2i.ZERO:
 		return false
 
-	if dir.x < 0 and anim: anim.flip_h = true
-	elif dir.x > 0 and anim: anim.flip_h = false
+	if dir.x < 0 and anim:
+		anim.flip_h = true
+	elif dir.x > 0 and anim:
+		anim.flip_h = false
 
-	var target := grid_pos + dir
+	var target: Vector2i = grid_pos + dir
 
 	if GameState.is_tile_blocked(target):
 		_play_anim("Idle")
@@ -128,7 +128,7 @@ func _move_entity(dir: Vector2i) -> bool:
 	Grid.occupy(grid_pos, self)
 
 	_play_anim("Walk")
-	var tw := create_tween()
+	var tw: Tween = create_tween()
 	tw.tween_property(self, "position", Grid.grid_to_world(grid_pos), MOVE_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tw.finished.connect(func(): _play_anim("Idle"))
 
@@ -145,17 +145,20 @@ func _check_harmful_tile() -> void:
 
 
 func attack_player() -> void:
-	var attack_duration := 0.8
+	var attack_duration: float = 0.8
 	if anim and anim.sprite_frames and anim.sprite_frames.has_animation("Attack"):
-		var fps := anim.sprite_frames.get_animation_speed("Attack")
-		var frames := anim.sprite_frames.get_frame_count("Attack")
+		var fps: float = anim.sprite_frames.get_animation_speed("Attack")
+		var frames: int = anim.sprite_frames.get_frame_count("Attack")
 		if fps > 0:
-			attack_duration = frames / float(fps)
+			attack_duration = float(frames) / fps
 
 	if GameState.player_ref:
-		var diff: Vector2i = GameState.player_ref.get("grid_pos") - grid_pos
-		if diff.x < 0 and anim: anim.flip_h = true
-		elif diff.x > 0 and anim: anim.flip_h = false
+		var target_pos: Vector2i = GameState.player_ref.get("grid_pos")
+		var diff: Vector2i = target_pos - grid_pos
+		if diff.x < 0 and anim:
+			anim.flip_h = true
+		elif diff.x > 0 and anim:
+			anim.flip_h = false
 
 	_play_anim("Attack")
 	if GameState.player_ref and GameState.player_ref.has_method("_die"):
@@ -163,7 +166,7 @@ func attack_player() -> void:
 
 
 func _dir_toward(target: Vector2i) -> Vector2i:
-	var diff := target - grid_pos
+	var diff: Vector2i = target - grid_pos
 	if abs(diff.x) >= abs(diff.y):
 		return Vector2i(sign(diff.x), 0)
 	return Vector2i(0, sign(diff.y))
@@ -184,16 +187,16 @@ func _on_die_as_entity() -> void:
 
 
 func _scatter_tags() -> void:
-	var dirs := [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]
-	for tag in tags.duplicate():
-		for dir in dirs:
-			var neighbor := grid_pos + dir
+	var dirs: Array[Vector2i] = [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]
+	for tag: String in tags.duplicate():
+		for dir: Vector2i in dirs:
+			var neighbor: Vector2i = grid_pos + dir
 			var occ: Node2D = Grid.get_occupant(neighbor)
 			if occ != null and occ.get("tags") != null:
 				if occ.tags.size() < 2 and not tag in occ.tags:
 					occ.tags.append(tag)
 					break
-			var wt := Grid.get_wall_tags(neighbor)
+			var wt: Array = Grid.get_wall_tags(neighbor)
 			if wt.size() < 2 and not tag in wt:
 				Grid.add_wall_tag(neighbor, tag)
 				break
@@ -206,9 +209,9 @@ func _play_anim(anim_name: String) -> void:
 
 func _on_substrate_toggled(active: bool) -> void:
 	if not active and queued_turns > 0:
-		var turns := queued_turns
+		var turns: int = queued_turns
 		queued_turns = 0
-		for i in turns:
+		for i in range(turns):
 			take_turn()
 
 

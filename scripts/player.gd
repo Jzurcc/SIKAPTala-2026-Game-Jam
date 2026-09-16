@@ -50,7 +50,7 @@ func _ready() -> void:
 
 func _setup_selector() -> void:
 	selector = Sprite2D.new()
-	var img := Image.create(16, 16, false, Image.FORMAT_RGBA8)
+	var img: Image = Image.create(16, 16, false, Image.FORMAT_RGBA8)
 	for i in range(2, 14):
 		for t in range(2):
 			img.set_pixel(i, 2 + t, Color.WHITE)
@@ -99,11 +99,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if is_moving or is_dead or GameState.is_substrate:
 		return
 
-	var is_move_event := event.is_action("move_left") or event.is_action("move_right") or event.is_action("move_forward") or event.is_action("move_back")
+	var is_move_event: bool = event.is_action("move_left") or event.is_action("move_right") or event.is_action("move_forward") or event.is_action("move_back")
 	if not is_move_event or event.is_echo():
 		return
 
-	var dir := _get_held_dir()
+	var dir: Vector2i = _get_held_dir()
 	if dir == Vector2i.ZERO:
 		return
 
@@ -129,7 +129,7 @@ func _interact() -> void:
 		selector_tween.parallel().tween_property(selector, "scale", Vector2.ONE, 0.2)
 		selector_tween.parallel().tween_property(selector, "modulate:a", 0.0, 0.2)
 
-	var target := grid_pos + facing_dir
+	var target: Vector2i = grid_pos + facing_dir
 
 	# 1. Check for Occupant (Beads, WorldObjects)
 	var occupant: Node2D = Grid.get_occupant(target)
@@ -145,13 +145,13 @@ func _interact() -> void:
 			return
 
 	# 2. Check for SubtextRegions (Any layer)
-	var region = Grid.get_region_at(target)
+	var region: Node2D = Grid.get_region_at(target)
 	if region != null and "INTERACTABLE" in region.tags:
 		dialogue.show_for(region)
 		return
 
 	# 3. Check for TileMap Layers (Fallback for static walls/floors)
-	for layer in GameState.solid_tilemaps:
+	for layer: TileMapLayer in GameState.solid_tilemaps:
 		if layer.get_used_cells().has(target):
 			if "tags" in layer and "INTERACTABLE" in layer.tags:
 				dialogue.show_for(layer)
@@ -169,7 +169,7 @@ func _attempt_move(dir: Vector2i) -> void:
 	elif dir.x > 0:
 		_set_flip(false)
 
-	var target := grid_pos + dir
+	var target: Vector2i = grid_pos + dir
 
 	if GameState.is_tile_blocked(target):
 		_play_anim("Idle")
@@ -226,14 +226,14 @@ func _step_to(new_pos: Vector2i, _dir: Vector2i) -> void:
 	is_moving = true
 	_move_tween = create_tween()
 
-	var target_pos := Grid.grid_to_world(grid_pos)
+	var target_pos: Vector2 = Grid.grid_to_world(grid_pos)
 	_move_tween.tween_property(self, "position", target_pos, 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	_move_tween.finished.connect(_on_move_finished, CONNECT_ONE_SHOT)
 
 
 func _on_move_finished() -> void:
 	is_moving = false
-	var held := _get_held_dir()
+	var held: Vector2i = _get_held_dir()
 	if held != Vector2i.ZERO and not is_dead and not GameState.is_substrate:
 		_attempt_move(held)
 	else:
@@ -242,8 +242,8 @@ func _on_move_finished() -> void:
 
 func _get_held_dir() -> Vector2i:
 	for i in range(_held_dirs.size() - 1, -1, -1):
-		var dir := _held_dirs[i]
-		var action := ""
+		var dir: Vector2i = _held_dirs[i]
+		var action: String = ""
 		if dir == Vector2i(-1, 0): action = "move_left"
 		elif dir == Vector2i(1, 0): action = "move_right"
 		elif dir == Vector2i(0, -1): action = "move_forward"
@@ -298,15 +298,15 @@ func _die(death_delay: float = 0.8) -> void:
 	_cancel_move()
 	GameState.player_died.emit()
 
-	var fade_layer := CanvasLayer.new()
+	var fade_layer: CanvasLayer = CanvasLayer.new()
 	fade_layer.layer = 120
-	var color_rect := ColorRect.new()
+	var color_rect: ColorRect = ColorRect.new()
 	color_rect.color = Color(0, 0, 0, 0)
 	color_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	fade_layer.add_child(color_rect)
 	get_tree().current_scene.add_child(fade_layer)
 
-	var tw := create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	var tw: Tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tw.tween_interval(death_delay)
 	tw.tween_property(color_rect, "color:a", 1.0, 0.5)
 	await tw.finished
