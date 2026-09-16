@@ -61,7 +61,8 @@ var is_transitioning: bool:
 func register_player(p: Node2D) -> void:
 	player_ref = p
 	if player_ref:
-		player_ref.z_index = 100
+		player_ref.z_index = 1
+		player_ref.y_sort_enabled = true
 
 
 func register_entity(e: Node2D) -> void:
@@ -86,6 +87,8 @@ func refresh_tilemaps() -> void:
 	solid_tilemaps.clear()
 	var root: Node = get_tree().current_scene
 	if root:
+		if root is Node2D:
+			(root as Node2D).y_sort_enabled = true
 		_find_tilemaps_recursive(root)
 
 
@@ -94,8 +97,10 @@ func _find_tilemaps_recursive(node: Node) -> void:
 		if not node in solid_tilemaps:
 			if "Floor" in node.name or "Ground" in node.name:
 				node.z_index = 0
+				node.y_sort_enabled = false
 			else:
 				node.z_index = 1
+				node.y_sort_enabled = true
 			solid_tilemaps.append(node)
 	for child: Node in node.get_children():
 		_find_tilemaps_recursive(child)

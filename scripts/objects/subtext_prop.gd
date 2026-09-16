@@ -22,6 +22,8 @@ extends GridBody2D
 		grid_size = val
 		_update_visuals()
 
+@export var is_overhead: bool = false
+
 var _sprite: Sprite2D
 
 
@@ -51,8 +53,10 @@ func _on_ready() -> void:
 	if Engine.is_editor_hint():
 		return
 
-	z_index = 100
-
+	if is_overhead:
+		z_index = 50
+	else:
+		z_index = 1
 
 
 func _on_die() -> void:
@@ -76,6 +80,8 @@ func _update_visuals() -> void:
 			)
 			sprite.region_rect = rect
 			sprite.centered = false
-			sprite.position = Vector2(-float(Grid.TILE_SIZE) / 2.0, -float(Grid.TILE_SIZE) / 2.0)
+			var y_offset: float = float(atlas_size.y - 1) * float(Grid.TILE_SIZE) + 1.0
+			sprite.position = Vector2(-float(Grid.TILE_SIZE) / 2.0, -float(Grid.TILE_SIZE) / 2.0 - y_offset)
 	else:
 		sprite.region_enabled = false
+

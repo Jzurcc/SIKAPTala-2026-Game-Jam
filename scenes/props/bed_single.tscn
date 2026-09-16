@@ -10,4 +10,4 @@ atlas_coords = Vector2i(39, 33)
 atlas_size = Vector2i(1, 2)
 id = "bed"
 custom_dialogues = Array[String](["I'm not sleepy yet.", "A cozy bed...", "So nice and fluffy."])
-tags = Array[String](["IMPASSABLE", "INTERACTABLE", "LIGHT"])
+tags = Array[String](["PASSABLE", "INTERACTABLE", "LIGHT"])

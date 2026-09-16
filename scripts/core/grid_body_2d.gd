@@ -19,8 +19,10 @@ const MOVE_DURATION := 0.18
 
 
 func _ready() -> void:
+	y_sort_enabled = true
+	z_index = 1
 	grid_pos = Grid.world_to_grid(position)
-	position = Grid.grid_to_world(grid_pos)
+	position = get_base_world_pos()
 	_occupy_cells()
 	GameState.register_object(self)
 	_on_ready()
@@ -85,7 +87,7 @@ func push(dir: Vector2i) -> bool:
 	grid_pos = target
 	_occupy_cells()
 	Grid.refresh_all_tags()
-	_tween_to(Grid.grid_to_world(grid_pos))
+	_tween_to(get_base_world_pos())
 	return true
 
 
@@ -107,8 +109,7 @@ func step(dir: Vector2i) -> bool:
 	_occupy_cells()
 	Grid.refresh_all_tags()
 
-	var target_world: Vector2 = Grid.grid_to_world(grid_pos)
-	_tween_to(target_world)
+	_tween_to(get_base_world_pos())
 	play_anim("Walk")
 	return true
 
