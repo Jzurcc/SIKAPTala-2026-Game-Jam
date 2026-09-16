@@ -13,7 +13,7 @@ var anim: AnimatedSprite2D
 
 func _on_ready() -> void:
 	z_index = 100
-	for child in get_children():
+	for child: Node in get_children():
 		if child is AnimatedSprite2D:
 			anim = child
 			break
@@ -91,40 +91,13 @@ func _move_entity(dir: Vector2i) -> bool:
 	elif dir.x > 0 and anim:
 		anim.flip_h = false
 
-	var target: Vector2i = grid_pos + dir
-
-	if GameState.is_tile_blocked(target):
+	var res: Dictionary = Grid.resolve_step(self, dir)
+	if not res.get("success", false):
 		_play_anim("Idle")
 		return false
 
-	var occupant: Node2D = Grid.get_occupant(target)
-	if occupant != null:
-		if occupant == GameState.player_ref:
-			if "HARMFUL" in tags:
-				attack_player()
-			else:
-				_play_anim("Idle")
-			return false
-
-		if occupant.get("tags") != null and "FRAGILE" in occupant.tags:
-			if occupant.has_method("die"):
-				occupant.die()
-			elif occupant.has_method("_die"):
-				occupant._die()
-		elif "PUSHING" in tags and occupant.has_method("push"):
-			if not occupant.push(dir):
-				_play_anim("Idle")
-				return false
-		else:
-			_play_anim("Idle")
-			return false
-
-	if "FRAGILE" in tags:
-		_on_die_as_entity()
-		return false
-
 	Grid.vacate(grid_pos)
-	grid_pos = target
+	grid_pos = res["target_pos"]
 	Grid.occupy(grid_pos, self)
 
 	_play_anim("Walk")
@@ -132,16 +105,7 @@ func _move_entity(dir: Vector2i) -> bool:
 	tw.tween_property(self, "position", Grid.grid_to_world(grid_pos), MOVE_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tw.finished.connect(func(): _play_anim("Idle"))
 
-	if GameState.is_tile_blocked(grid_pos) and "FRAGILE" in tags:
-		_on_die_as_entity()
-
-	_check_harmful_tile()
 	return true
-
-
-func _check_harmful_tile() -> void:
-	if "HARMFUL" in Grid.get_wall_tags(grid_pos):
-		_on_die_as_entity()
 
 
 func attack_player() -> void:

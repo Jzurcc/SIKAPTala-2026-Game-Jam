@@ -2,7 +2,7 @@ class_name DragController
 extends Node
 
 ## Handles dragging and dropping of tags in Subtext mode.
-## Extracted from TagDisplayManager in Phase 6.
+## Operates directly with Grid's spatial tag registry without transient node spawning.
 
 signal drag_started(tag: String, index: int)
 signal drag_cancelled
@@ -134,14 +134,17 @@ func update_visual(delta: float, is_selected: bool, hover_label: TagLabel) -> vo
 	drag_visual.scale = lerp(drag_visual.scale, Vector2(target_scale, target_scale), 0.1)
 
 
-func handle_drop(mouse_pos: Vector2, hover_label: TagLabel, last_highlighted: Node2D, get_hovered_tile_layer_fn: Callable) -> void:
+func handle_drop(mouse_pos: Vector2, hover_label: TagLabel, last_highlighted: Node2D, display_manager: Node) -> void:
 	if not is_dragging:
 		return
 
 	var grid_pos: Vector2i = Grid.world_to_grid(mouse_pos)
-	var target_layer: TileMapLayer = get_hovered_tile_layer_fn.call(mouse_pos, true)
-	if target_layer == null:
-		target_layer = get_hovered_tile_layer_fn.call(mouse_pos, false)
+	var target_layer: TileMapLayer = null
+	if display_manager and display_manager.has_method("get_hovered_tile_layer"):
+		target_layer = display_manager.get_hovered_tile_layer(mouse_pos, true)
+		if target_layer == null:
+			target_layer = display_manager.get_hovered_tile_layer(mouse_pos, false)
+
 	var target_node: Node2D = null
 
 	# 1. Check if clicking directly on a tag label
@@ -161,37 +164,26 @@ func handle_drop(mouse_pos: Vector2, hover_label: TagLabel, last_highlighted: No
 			target_node = occ
 
 	if not target_node and target_layer:
-		if target_layer.get("tags") != null:
+		if target_layer.get("tags") != null or not Grid.get_cell_tags(grid_pos, target_layer.name).is_empty():
 			target_node = target_layer
 
-	if target_node and target_node != drag_source_node:
+	if target_node and (target_node != drag_source_node or grid_pos != drag_source_pos):
 		var target_idx: int = hover_label.get_hovered_tag_index(mouse_pos, false) if hover_label else -1
 		if target_idx == -1:
 			target_idx = 0
-		perform_swap(drag_source_node, drag_index, target_node, target_idx, hover_label)
+		perform_swap(drag_source_node, drag_source_pos, drag_index, target_node, grid_pos, target_idx, hover_label)
 
 	cancel(hover_label)
 
 
-func perform_swap(source: Node2D, s_idx: int, target: Node2D, t_idx: int, hover_label: TagLabel) -> void:
-	if not is_instance_valid(source) or not is_instance_valid(target):
+func perform_swap(source_node: Node2D, source_pos: Vector2i, s_idx: int, target_node: Node2D, target_pos: Vector2i, t_idx: int, hover_label: TagLabel) -> void:
+	if not is_instance_valid(source_node) or not is_instance_valid(target_node):
 		return
 
-	if source is TileMapLayer:
-		source = Grid.isolate_tile_as_region(drag_source_pos, source.name)
+	var s_tags: Array[String] = _get_node_tags(source_node, source_pos)
+	var t_tags: Array[String] = _get_node_tags(target_node, target_pos)
 
-	if target is TileMapLayer:
-		var current_sc: Node = get_tree().current_scene
-		var m_pos: Vector2 = (current_sc as Node2D).get_global_mouse_position() if current_sc is Node2D else Vector2.ZERO
-		var g_pos: Vector2i = Grid.world_to_grid(m_pos)
-		target = Grid.isolate_tile_as_region(g_pos, target.name)
-
-	GameState.push_undo_state()
-
-	var s_tags: Array = source.get("tags")
-	var t_tags: Array = target.get("tags")
-
-	if s_tags == null or t_tags == null:
+	if s_tags.is_empty() or t_tags.is_empty():
 		return
 
 	if "LOCKED" in t_tags:
@@ -201,20 +193,42 @@ func perform_swap(source: Node2D, s_idx: int, target: Node2D, t_idx: int, hover_
 		swap_completed.emit()
 		return
 
-	if t_idx < 0 or t_idx >= t_tags.size():
+	if s_idx < 0 or s_idx >= s_tags.size() or t_idx < 0 or t_idx >= t_tags.size():
 		return
 
-	var tag_to_move: String = str(s_tags[s_idx])
-	var tag_from_target: String = str(t_tags[t_idx])
+	GameState.push_undo_state()
+
+	var tag_to_move: String = s_tags[s_idx]
+	var tag_from_target: String = t_tags[t_idx]
 
 	s_tags[s_idx] = tag_from_target
 	t_tags[t_idx] = tag_to_move
 
-	if source.has_method("update_tags"):
-		source.update_tags(s_tags)
-
-	if target.has_method("update_tags"):
-		target.update_tags(t_tags)
+	_set_node_tags(source_node, source_pos, s_tags)
+	_set_node_tags(target_node, target_pos, t_tags)
 
 	Grid.refresh_all_tags()
 	swap_completed.emit()
+
+
+func _get_node_tags(node: Node2D, pos: Vector2i) -> Array[String]:
+	if not is_instance_valid(node):
+		return []
+	if node is TileMapLayer:
+		return Grid.get_cell_tags(pos, node.name)
+	if node.get("tags") != null:
+		var res: Array[String] = []
+		res.assign(node.tags)
+		return res
+	return []
+
+
+func _set_node_tags(node: Node2D, pos: Vector2i, new_tags: Array[String]) -> void:
+	if not is_instance_valid(node):
+		return
+	if node is TileMapLayer:
+		Grid.set_cell_tag_override(pos, node.name, new_tags)
+	elif node.has_method("update_tags"):
+		node.update_tags(new_tags)
+	elif node.get("tags") != null:
+		node.tags.assign(new_tags)

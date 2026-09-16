@@ -1,7 +1,7 @@
 extends Node
 
 ## Manages hover detection, tag display, and substrate highlight orchestration.
-## Delegates drag and drop mechanics to DragController (Phase 6).
+## Delegates drag and drop mechanics to DragController.
 
 const DragControllerScript = preload("res://scripts/ui/drag_controller.gd")
 
@@ -68,7 +68,7 @@ func _input(event: InputEvent) -> void:
 
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 			if drag.is_dragging:
-				drag.handle_drop(mouse_pos, hover_label, last_highlighted, get_hovered_tile_layer)
+				drag.handle_drop(mouse_pos, hover_label, last_highlighted, self)
 				get_viewport().set_input_as_handled()
 				return
 
@@ -84,12 +84,8 @@ func _on_tag_drag_started(tag: String, index: int) -> void:
 
 	var current_sc: Node = get_tree().current_scene
 	var m_pos: Vector2 = (current_sc as Node2D).get_global_mouse_position() if current_sc is Node2D else Vector2.ZERO
-
-	if last_highlighted is TileMapLayer:
-		var g_pos: Vector2i = Grid.world_to_grid(m_pos)
-		last_highlighted = Grid.isolate_tile_as_region(g_pos, last_highlighted.name)
-
 	var source_pos: Vector2i = Grid.world_to_grid(m_pos)
+
 	drag.begin_drag(tag, index, last_highlighted, source_pos, label_container, hover_label)
 
 
@@ -164,10 +160,8 @@ func _process(delta: float) -> void:
 			_set_highlight(region)
 		else:
 			tags = []
-			if top_layer != null and Grid.layer_tags.has(grid_pos):
-				var lt: Dictionary = Grid.layer_tags[grid_pos]
-				if lt.has(top_layer.name):
-					tags = lt[top_layer.name].duplicate()
+			if top_layer != null:
+				tags = Grid.get_cell_tags(grid_pos, top_layer.name)
 
 			_target_world_pos = Grid.grid_to_world(grid_pos)
 
@@ -223,14 +217,12 @@ func get_hovered_tile_layer(mouse_pos: Vector2, check_tags: bool = false) -> Til
 	var grid_pos: Vector2i = Grid.world_to_grid(mouse_pos)
 	for i in range(GameState.solid_tilemaps.size() - 1, -1, -1):
 		var layer: TileMapLayer = GameState.solid_tilemaps[i]
-
-		if check_tags:
-			if not Grid.layer_tags.has(grid_pos) or not Grid.layer_tags[grid_pos].has(layer.name):
-				if not Grid.get_region_at(grid_pos):
-					continue
-
-		if layer.get_cell_source_id(grid_pos) != -1:
-			return layer
+		if is_instance_valid(layer) and layer.get_cell_source_id(grid_pos) != -1:
+			if check_tags:
+				if not Grid.get_cell_tags(grid_pos, layer.name).is_empty() or Grid.get_region_at(grid_pos, layer.name) != null:
+					return layer
+			else:
+				return layer
 	return null
 
 

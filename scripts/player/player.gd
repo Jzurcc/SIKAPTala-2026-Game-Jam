@@ -25,7 +25,6 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	add_to_group("player")
 
-	# Ensure sprites freeze when the game is paused (e.g. during TAB or tutorial)
 	anim_player.process_mode = Node.PROCESS_MODE_PAUSABLE
 	anim_hair.process_mode = Node.PROCESS_MODE_PAUSABLE
 	anim_tool.process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -150,7 +149,7 @@ func _interact() -> void:
 		dialogue.show_for(region)
 		return
 
-	# 3. Check for TileMap Layers (Fallback for static walls/floors)
+	# 3. Check for TileMap Layers
 	for layer: TileMapLayer in GameState.solid_tilemaps:
 		if layer.get_used_cells().has(target):
 			if "tags" in layer and "INTERACTABLE" in layer.tags:
@@ -161,74 +160,24 @@ func _interact() -> void:
 func _attempt_move(dir: Vector2i) -> void:
 	facing_dir = dir
 
-	# Capture state BEFORE any movement or pushes happen
-	GameState.push_undo_state()
-
 	if dir.x < 0:
 		_set_flip(true)
 	elif dir.x > 0:
 		_set_flip(false)
 
-	var target: Vector2i = grid_pos + dir
+	var success: bool = GameState.step_turn(self, dir)
+	if success:
+		_play_anim("Walk")
+		if _move_tween:
+			_move_tween.kill()
 
-	if GameState.is_tile_blocked(target):
+		is_moving = true
+		_move_tween = create_tween()
+		var target_pos: Vector2 = Grid.grid_to_world(grid_pos)
+		_move_tween.tween_property(self, "position", target_pos, MOVE_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		_move_tween.finished.connect(_on_move_finished, CONNECT_ONE_SHOT)
+	else:
 		_play_anim("Idle")
-		GameState.process_turn()
-		return
-
-	var occupant: Node2D = Grid.get_occupant(target)
-	if occupant != null:
-		if occupant.get("tags") != null and "PASSABLE" in occupant.tags:
-			pass
-		elif occupant.get("tags") != null and "FRAGILE" in occupant.tags:
-			if occupant.has_method("die"):
-				occupant.die()
-			elif occupant.has_method("_die"):
-				occupant._die()
-		elif occupant.get("tags") != null and "HARMFUL" in occupant.tags:
-			if occupant.has_method("attack_player"):
-				occupant.attack_player()
-			else:
-				_die()
-			return
-		elif occupant.has_method("push"):
-			if occupant.push(dir):
-				pass
-			else:
-				GameState.undo_stack.pop_back()
-				_play_anim("Idle")
-				return
-		else:
-			GameState.undo_stack.pop_back()
-			_play_anim("Idle")
-			return
-
-	_step_to(target, dir)
-
-	if GameState.has_harmful_at(grid_pos):
-		_die(0.3)
-		return
-
-	GameState.process_turn()
-
-
-func _step_to(new_pos: Vector2i, _dir: Vector2i) -> void:
-	Grid.vacate(grid_pos)
-	grid_pos = new_pos
-	Grid.occupy(grid_pos, self)
-	GameState.player_moved.emit(position)
-
-	_play_anim("Walk")
-
-	if _move_tween:
-		_move_tween.kill()
-
-	is_moving = true
-	_move_tween = create_tween()
-
-	var target_pos: Vector2 = Grid.grid_to_world(grid_pos)
-	_move_tween.tween_property(self, "position", target_pos, 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	_move_tween.finished.connect(_on_move_finished, CONNECT_ONE_SHOT)
 
 
 func _on_move_finished() -> void:
@@ -264,16 +213,6 @@ func _cancel_move() -> void:
 	anim_player.position = Vector2.ZERO
 	anim_hair.position = Vector2.ZERO
 	anim_tool.position = Vector2.ZERO
-
-
-func _try_push(obj: Node2D, dir: Vector2i) -> bool:
-	if obj.get("tags") == null:
-		return false
-	if not "LIGHT" in obj.tags:
-		return false
-	if not obj.has_method("push"):
-		return false
-	return obj.push(dir)
 
 
 func _play_anim(anim_name: String) -> void:

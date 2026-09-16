@@ -1,6 +1,6 @@
 # SIKAPTala — Architecture & Extensibility Guide
 
-> **A comprehensive technical reference detailing the architectural remediation from [`code review.md`](code%20review.md), system designs, and extensibility playbooks for future game development.**
+> **A comprehensive technical reference detailing the architectural design, system patterns, module depths, and extensibility playbooks for SIKAPTala.**
 
 ---
 
@@ -8,36 +8,40 @@
 1. [Architectural Transformation Overview](#1-architectural-transformation-overview)
 2. [Detailed Record of Remediation Changes](#2-detailed-record-of-remediation-changes)
 3. [Core Architectural Principles](#3-core-architectural-principles)
-4. [Step-by-Step Extensibility Playbooks](#4-step-by-step-extensibility-playbooks)
+4. [Deepened Subsystem Pipelines](#4-deepened-subsystem-pipelines)
+   - [Movement & Rule Resolution Engine](#movement--rule-resolution-engine)
+   - [Transactional Turn Pipeline](#transactional-turn-pipeline)
+   - [Spatial Tag Registry & Overrides](#spatial-tag-registry--overrides)
+5. [Step-by-Step Extensibility Playbooks](#5-step-by-step-extensibility-playbooks)
    - [Playbook 1: Adding a New Tag](#playbook-1-adding-a-new-tag)
    - [Playbook 2: Adding a New Object / Prop / Hazard](#playbook-2-adding-a-new-object--prop--hazard)
    - [Playbook 3: Adding a New AI Entity Behavior](#playbook-3-adding-a-new-ai-entity-behavior)
    - [Playbook 4: Reworking UI & Subtext Interactions](#playbook-4-reworking-ui--subtext-interactions)
-5. [GDScript 4 Best Practices & Engineering Standards](#5-gdscript-4-best-practices--engineering-standards)
+6. [GDScript 4 Best Practices & Engineering Standards](#6-gdscript-4-best-practices--engineering-standards)
 
 ---
 
 ## 1. Architectural Transformation Overview
 
 ### Before: The Monolithic & Circular Architecture
-Prior to remediation, the codebase suffered from circular God-Autoloads, quadruplicated tile-slicing logic, pervasive duck-typing, and monolithic scripts exceeding 500 lines:
+Prior to remediation, the codebase suffered from circular God-Autoloads, quadruplicated tile-slicing logic, pervasive duck-typing, scattered collision heuristics, and monolithic scripts exceeding 500 lines:
 
 ```mermaid
 graph TD
     GS_OLD[GameState God-Autoload<br/>7 Unrelated Responsibilities] <--> GR_OLD[Grid God-Autoload<br/>Spatial + Spawner + Scene Manipulation]
-    GS_OLD --> P_OLD[Player.gd: 559 lines<br/>Movement + Tutorial UI + Dialogue + Drawing]
+    GS_OLD --> P_OLD[Player.gd: 559 lines<br/>Movement + Tutorial UI + Dialogue + Drawing + Collision]
     GS_OLD --> TDM_OLD[TagDisplayManager: 438 lines<br/>Hover + CPU Pixel Peeking + Drag Physics]
     GR_OLD --> OBJ_OLD[Fragmented Objects<br/>WorldObject / SubtextProp / TileToObject / Entity]
 ```
 
-### After: Decoupled, Single-Responsibility System
-The codebase has been refactored into focused services, typed class hierarchies, and decoupled controllers:
+### After: Deep Modules, Single Interfaces & Atomic Transactions
+The codebase has been refactored into deep domain modules with high locality and testable seams:
 
 ```mermaid
 graph TD
     subgraph Core Singletons & Services
-        GS[GameState<br/>Game Flow, Registry, Undo Engine]
-        GR[Grid<br/>Pure 2D Spatial Index & Cell Queries]
+        GS[GameState<br/>Transactional Turn Pipeline & Undo Engine]
+        GR[Grid<br/>Spatial Registry & Atomic Step Rule Engine]
         AM[AudioManager<br/>BGM Playlist, SFX, Bus Filters]
         SM[SceneManager<br/>Transitions & Screen Fading]
         TC[TileConverter<br/>Atlas-to-Sprite & Runtime Conversions]
@@ -45,7 +49,7 @@ graph TD
 
     subgraph Domain Hierarchy
         GB[GridBody2D Base Class<br/>Multi-cell Snapping, Push Physics, Death]
-        GB --> P[Player<br/>Input, Movement, Facing]
+        GB --> P[Player<br/>Input, Facing, Animation Dispatch]
         GB --> E[Entity<br/>Turn AI, Patrol, Chase, Flee, Death]
         GB --> WO[WorldObject / Prop<br/>Light Objects, Beads, Obstacles]
         GB --> SP[SubtextProp<br/>Multi-tile Textured Props]
@@ -55,7 +59,7 @@ graph TD
     subgraph Decoupled Subsystems
         P --> TUTC[TutorialController<br/>CanvasLayer, Typewriter, Step Input]
         P --> DB[DialogueBubble<br/>Text Wrapping, Bubble Sway, ID Dialogues]
-        TDM[TagDisplayManager<br/>Hover Detection & Tile Highlights] --> DC[DragController<br/>Spring Physics, Snapping, Swap Transactions]
+        TDM[TagDisplayManager<br/>Hover Detection & Tile Highlights] --> DC[DragController<br/>Spring Physics, Snapping, Spatial Tag Swaps]
     end
 ```
 
@@ -78,6 +82,9 @@ The table below summarizes every architectural issue diagnosed in [`code review.
 | **§5. CPU Pixel Peeking** | `img.get_pixel()` called per-frame on the CPU in `_process`. | Replaced with discrete integer grid cell queries (`get_cell_source_id`). | [`tag_display_manager.gd`](scripts/ui/tag_display_manager.gd) |
 | **§5. Drag Monolith** | `tag_display_manager.gd` mixed hover display with drag springs and swap logic. | Extracted `DragController`. Reduced display manager to 261 lines. | [`drag_controller.gd`](scripts/ui/drag_controller.gd)<br>[`tag_display_manager.gd`](scripts/ui/tag_display_manager.gd) |
 | **§6. Incomplete Undo System** | Missing `layer_tags`, missing `regions`, destroyed tiles lost forever, dead entities lost to `queue_free()`. | Built typed `UndoSnapshot`, deferred death via `GameState.mark_dead()`, and tile restoration on undo. | [`game_state.gd`](scripts/core/game_state.gd)<br>[`grid_body_2d.gd`](scripts/core/grid_body_2d.gd)<br>[`tile_converter.gd`](scripts/services/tile_converter.gd) |
+| **Deepening 1: Rule Engine** | Movement and collision checks duplicated across player, entity, and gamestate. | Unified into `Grid.resolve_step(actor, dir)` returning structured resolution results. | [`grid.gd`](scripts/core/grid.gd)<br>[`player.gd`](scripts/player/player.gd)<br>[`entity.gd`](scripts/entities/entity.gd) |
+| **Deepening 2: Turn Pipeline** | Distributed step choreography across input handling and loose signal handlers. | Encapsulated into atomic `GameState.step_turn(actor, dir)`. | [`game_state.gd`](scripts/core/game_state.gd)<br>[`player.gd`](scripts/player/player.gd) |
+| **Deepening 3: Spatial Tags** | Tag dragging spawned runtime SubtextRegion nodes into scene tree. | Replaced with in-memory `cell_tag_overrides` dictionary, eliminating transient scene mutation. | [`grid.gd`](scripts/core/grid.gd)<br>[`drag_controller.gd`](scripts/ui/drag_controller.gd) |
 
 ---
 
@@ -95,9 +102,9 @@ Never check what class a node is to determine its behavior. Check its **tags**:
 This ensures that any object, tile, or entity can acquire any behavior dynamically when tags are swapped.
 
 ### Principle 2: The Spatial Grid vs. Scene Tree Separation
-- **`Grid`** is the spatial database of coordinates, cell occupancy, and tag queries.
+- **`Grid`** is the spatial database of coordinates, cell occupancy, step resolution, and tag queries.
 - **Scene Nodes** are the visual representations.
-- Never manipulate scenes inside `Grid`. If a tile needs to become an object, route it through `TileConverter`.
+- Never manipulate scene trees directly inside `Grid`. If a tile needs to become an object, route it through `TileConverter`.
 
 ### Principle 3: The State Transaction Rule (Undo Compatibility)
 Any game mechanic that alters state (moving, swapping tags, killing an entity, converting a tile) must be reversible by the Undo system:
@@ -106,7 +113,63 @@ Any game mechanic that alters state (moving, swapping tags, killing an entity, c
 
 ---
 
-## 4. Step-by-Step Extensibility Playbooks
+## 4. Deepened Subsystem Pipelines
+
+### Movement & Rule Resolution Engine
+
+The `Grid.resolve_step(actor, dir)` engine consolidates all physics, pushing propagation, tag interactions, and harmful checks into a single atomic function:
+
+```mermaid
+flowchart TB
+    Actor[Player / Entity Step] --> GridEngine[Grid.resolve_step actor, dir]
+    GridEngine --> C1{Tile Blocked?}
+    C1 -- Yes --> B1[Result: blocked=true]
+    C1 -- No --> C2{Occupant at Target?}
+    C2 -- Yes --> C3{Occupant Tags}
+    C3 -- PASSABLE --> S1[Proceed]
+    C3 -- FRAGILE --> K1[Kill Occupant -> Proceed]
+    C3 -- HARMFUL + Player --> D1[Attack Player / Player Dies]
+    C3 -- Pushable --> P1{Recursive Push}
+    P1 -- Success --> S1
+    P1 -- Blocked --> B1
+    C2 -- No --> S1[Result: success=true]
+```
+
+### Transactional Turn Pipeline
+
+`GameState.step_turn(actor, dir)` coordinates snapshotting, rule resolution, AI execution, and turn completion:
+
+```mermaid
+sequenceDiagram
+    Player->>GameState: step_turn(self, dir)
+    GameState->>GameState: push_undo_state()
+    GameState->>Grid: resolve_step(self, dir)
+    alt Step Blocked / Aborted
+        GameState->>GameState: pop_undo_state() [Discard Snapshot]
+        GameState-->>Player: return false
+    else Step Succeeded
+        GameState->>Grid: vacate(old) & occupy(new)
+        GameState->>Entity: take_turn() [All Enemies]
+        GameState->>GameState: emit turn_processed
+        GameState-->>Player: return true
+    end
+```
+
+### Spatial Tag Registry & Overrides
+
+Tag dragging in Subtext mode no longer creates transient scene nodes. All tag overrides are tracked in pure spatial memory:
+
+```mermaid
+flowchart LR
+    Drag[DragController] -->|set_cell_tag_override pos, layer, tags| G[Grid]
+    G -->|updates in-memory| O[cell_tag_overrides Dictionary]
+    G -->|re-evaluates| W[wall_tags & layer_tags]
+    Undo[UndoSnapshot] -->|snapshot / restore| O
+```
+
+---
+
+## 5. Step-by-Step Extensibility Playbooks
 
 ---
 
@@ -114,7 +177,7 @@ Any game mechanic that alters state (moving, swapping tags, killing an entity, c
 
 Let's say you want to add a new tag: **`BURNING`** (destroys fragile objects on contact and spreads to neighbors).
 
-#### Step 1: Register the Tag in [`scripts/tag_def.gd`](scripts/tag_def.gd)
+#### Step 1: Register the Tag in [`scripts/core/tag_def.gd`](scripts/core/tag_def.gd)
 Add the tag name to `TagDef.Tag` enum:
 ```gdscript
 enum Tag {
@@ -126,7 +189,7 @@ enum Tag {
 }
 ```
 
-#### Step 2: Assign a Tag Color in [`scripts/tag_label.gd`](scripts/tag_label.gd)
+#### Step 2: Assign a Tag Color in [`scripts/ui/tag_label.gd`](scripts/ui/tag_label.gd)
 Add the display color for the substrate UI overlay:
 ```gdscript
 var tag_colors: Dictionary = {
@@ -136,17 +199,15 @@ var tag_colors: Dictionary = {
 ```
 
 #### Step 3: Implement the Behavior Hook
-Find the appropriate system where the tag operates:
-- If it affects **movement/stepping**, check in `GridBody2D.push()` or `player._attempt_move()`.
-- If it affects **turn processing**, add logic to `GameState.process_turn()` or `Entity.take_turn()`:
+Add the tag consequence in `Grid.resolve_step()` or `GameState.process_turn()`:
 ```gdscript
-# Example in GameState or Entity:
-if "BURNING" in tags:
-    var neighbor_cells = [grid_pos + Vector2i.UP, grid_pos + Vector2i.DOWN, ...]
-    for n in neighbor_cells:
-        var occ = Grid.get_occupant(n)
-        if occ and "FRAGILE" in occ.tags:
-            occ.die()
+# Example in GameState.process_turn():
+for e in entities:
+    if "BURNING" in e.tags:
+        for dir in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+            var occ = Grid.get_occupant(e.grid_pos + dir)
+            if occ and "FRAGILE" in occ.tags:
+                occ.die()
 ```
 
 ---
@@ -163,7 +224,6 @@ extends GridBody2D
 @export var is_active: bool = true
 
 func _on_ready() -> void:
-    # Set default tags if not configured in Inspector
     if tags.is_empty():
         tags = ["HARMFUL", "IMPASSABLE"]
     GameState.register_object(self)
@@ -172,7 +232,6 @@ func _on_die() -> void:
     GameState.unregister_object(self)
     Grid.refresh_all_tags()
 
-# Optional: Custom push rules
 func can_be_pushed(dir: Vector2i) -> bool:
     return "LIGHT" in tags and not is_active
 ```
@@ -180,7 +239,7 @@ func can_be_pushed(dir: Vector2i) -> bool:
 #### Step 2: Create the Scene (`SpikeTrap.tscn`)
 - Root node: `Node2D` with `SpikeTrap.gd` attached.
 - Child node: `Sprite2D` or `AnimatedSprite2D`.
-- That's it! `GridBody2D` automatically handles grid snapping, occupancy registration, tween movement, and undo/redo support.
+- `GridBody2D` automatically handles grid snapping, occupancy registration, tween movement, and undo/redo support.
 
 ---
 
@@ -189,7 +248,7 @@ func can_be_pushed(dir: Vector2i) -> bool:
 To create a new AI enemy behavior (e.g. `WANDERING`, `MIMIC`):
 
 1. **Add tag to `TagDef`** (e.g. `WANDERING`).
-2. **Add behavior branch in [`scripts/entity.gd`](scripts/entity.gd)** inside `take_turn()`:
+2. **Add behavior branch in [`scripts/entities/entity.gd`](scripts/entities/entity.gd)** inside `take_turn()`:
 ```gdscript
 func take_turn() -> void:
     if not is_alive: return
@@ -198,65 +257,23 @@ func take_turn() -> void:
     if "CHASING" in tags:
         _do_chase()
     elif "WANDERING" in tags:
-        _do_wander()  # <-- Your new behavior function
-    elif "PATROLLING" in tags:
-        _do_patrol()
-    # ...
+        _do_wander()
 ```
-3. **Implement the function**:
-```gdscript
-func _do_wander() -> void:
-    var random_dirs = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
-    random_dirs.shuffle()
-    for dir in random_dirs:
-        if _move_entity(dir):
-            break
-```
+3. Implement `_do_wander()` using `_move_entity(random_dir)`. `_move_entity()` automatically invokes `Grid.resolve_step()`!
 
 ---
 
 ### Playbook 4: Reworking UI & Subtext Interactions
 
-The Subtext interface is separated cleanly into two layers:
-
-1. **[`TagDisplayManager`](scripts/tag_display_manager.gd)** (Visual Presentation):
-   - Responsible for: Raycasting hovered tiles/objects, positioning floating `TagLabel` UI, and driving hover pulse shaders.
-   - If you want to change how tags look or add tooltips, modify `TagLabel.gd` or `TagDisplayManager.gd`.
-
-2. **[`DragController`](scripts/drag_controller.gd)** (Interaction & Physics):
-   - Responsible for: Mouse dragging, drag velocity spring calculation, slot snapping preview, and performing tag swaps.
-   - If you want to change drag feel (e.g., gamepad support, tap-to-swap instead of drag), customize `DragController.gd` without touching tile highlights.
+1. **Tag Drag & Drop Mechanics**: Handled entirely inside [`scripts/ui/drag_controller.gd`](scripts/ui/drag_controller.gd).
+2. **Hover Detection & Tile Highlights**: Handled inside [`scripts/ui/tag_display_manager.gd`](scripts/ui/tag_display_manager.gd).
+3. **Subtext Overlay Shader & Fullscreen Post-Processing**: Configured in [`scripts/ui/subtext_overlay.gd`](scripts/ui/subtext_overlay.gd) and connected to `GameState.substrate_toggled`.
 
 ---
 
-## 5. GDScript 4 Best Practices & Engineering Standards
+## 6. GDScript 4 Best Practices & Engineering Standards
 
-### 1. Strict Static Typing (No Inferred Variants)
-Godot 4's compiler emits errors/warnings when inferring types from Variant expressions. Always specify explicit type annotations:
-
-```gdscript
-# ❌ Bad: Inferred from Variant function
-var mouse_pos := get_global_mouse_position()
-var alpha := lerp(0.3, 0.8, p)
-var dirs := [Vector2i(1, 0)]  # Untyped Array
-
-# ✅ Good: Explicit type annotations
-var mouse_pos: Vector2 = get_global_mouse_position()
-var alpha: float = lerpf(0.3, 0.8, p)
-var dirs: Array[Vector2i] = [Vector2i(1, 0)]
-```
-
-### 2. Node Communication: "Call Down, Signal Up"
-- **Parent to Child**: Direct method call (e.g. `dialogue.show_for(object)`).
-- **Child to Parent**: Emit signals (e.g. `drag.swap_completed.connect(_on_swap_completed)`).
-- **Cross-System**: Use domain singletons (`GameState`, `Grid`, `AudioManager`, `SceneManager`).
-
-### 3. Autoload Boundaries
-Before adding anything to an Autoload, ask: *"Is this truly global game state, or does it belong to a local level/scene?"*
-- **`GameState`**: Turn flow, registry of active entities, undo stack.
-- **`Grid`**: 2D coordinate calculations, spatial lookup.
-- **`AudioManager`**: Sound effects and music playlist.
-- **`SceneManager`**: Screen transitions and scene changes.
-- **`TileConverter`**: Pure conversion helpers.
-
-Keep these singletons lean, clean, and decoupled.
+1. **Strict Static Typing**: Always explicitly type variables, parameters, and return types (`var pos: Vector2i = ...`). Never rely on `:=` when the RHS expression returns a `Variant` (e.g., `event.keycode`, `get_global_mouse_position()`, `lerp()`).
+2. **Node Names are `StringName`**: When doing ternary expressions with strings, always cast node names: `str(layer.name) if layer else ""`.
+3. **Symmetrical Registration**: Every object that registers on `_ready()` MUST unregister on `_exit_tree()` or `die()` (`GameState.unregister_object()`, `Grid.vacate()`).
+4. **Deferred Tile Conversions**: Use `TileConverter.convert_to_prop_if_unoccupied()` when converting static tiles into interactive objects at runtime.
