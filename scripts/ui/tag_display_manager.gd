@@ -1,7 +1,7 @@
 extends Node
 
 ## Manages hover detection, tag display, and substrate highlight orchestration.
-## Delegates drag and drop mechanics to DragController.
+## Enforces clean Top-Layer Precedence: Occupant -> SubtextRegion -> TileMapLayer.
 
 const DragControllerScript = preload("res://scripts/ui/drag_controller.gd")
 
@@ -136,42 +136,37 @@ func _process(delta: float) -> void:
 		has_content = true
 	else:
 		var grid_pos: Vector2i = Grid.world_to_grid(mouse_pos)
+		var occupant: Node2D = Grid.get_occupant(grid_pos)
 		var top_layer: TileMapLayer = get_hovered_tile_layer(mouse_pos, true)
 		if top_layer == null:
 			top_layer = get_hovered_tile_layer(mouse_pos, false)
 
 		var layer_name: String = str(top_layer.name) if top_layer else ""
 		var region: Node2D = Grid.get_region_at(grid_pos, layer_name)
+		if region != null and region.has_method("is_pixel_opaque") and not region.is_pixel_opaque(mouse_pos):
+			region = null
 
-		if region != null:
-			var target: String = region.get_effective_layer_name() if region.has_method("get_effective_layer_name") else ""
-			if target != "" and top_layer != null and target != top_layer.name:
-				region = null
-			elif region.has_method("is_pixel_opaque") and not region.is_pixel_opaque(mouse_pos):
-				region = null
-
-		var occupant: Node2D = Grid.get_occupant(grid_pos)
-
-		if region != null:
+		# Top-Layer Precedence Hierarchy:
+		# 1. Occupant (GridBody2D / Prop / Entity)
+		if occupant and occupant != GameState.player_ref:
+			_set_highlight(occupant)
+			tile_highlight_sprite.visible = false
+			if occupant.get("tags") != null:
+				tags = occupant.tags.duplicate()
+			_target_world_pos = occupant.global_position
+			has_content = true
+		# 2. SubtextRegion (Carpet / Furniture / Zone)
+		elif region != null:
 			tags = region.tags.duplicate()
 			_target_world_pos = region.get_center_world_pos() if region.has_method("get_center_world_pos") else region.global_position
 			has_content = true
 			tile_highlight_sprite.visible = false
 			_set_highlight(region)
-		else:
-			tags = []
-			if top_layer != null:
-				tags = Grid.get_cell_tags(grid_pos, top_layer.name)
-
+		# 3. Base TileMapLayer (Floor / Wall)
+		elif top_layer != null:
+			tags = Grid.get_cell_tags(grid_pos, top_layer.name)
 			_target_world_pos = Grid.grid_to_world(grid_pos)
-
-			if occupant and occupant != GameState.player_ref:
-				_set_highlight(occupant)
-				tile_highlight_sprite.visible = false
-				if occupant.get("tags") != null:
-					tags = occupant.tags.duplicate()
-				has_content = true
-			elif top_layer != null and not tags.is_empty():
+			if not tags.is_empty():
 				if last_highlighted != top_layer:
 					_clear_highlight()
 					last_highlighted = top_layer
@@ -180,6 +175,9 @@ func _process(delta: float) -> void:
 			else:
 				tile_highlight_sprite.visible = false
 				_clear_highlight()
+		else:
+			tile_highlight_sprite.visible = false
+			_clear_highlight()
 
 	if has_content and not tags.is_empty():
 		if not is_selected:

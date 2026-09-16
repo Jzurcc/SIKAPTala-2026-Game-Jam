@@ -147,22 +147,24 @@ func handle_drop(mouse_pos: Vector2, hover_label: TagLabel, last_highlighted: No
 
 	var target_node: Node2D = null
 
-	# 1. Check if clicking directly on a tag label
+	# 1. Direct tag label click
 	if hover_label and hover_label.get_hovered_tag_index(mouse_pos, false) != -1:
 		target_node = last_highlighted
 
-	# 2. Fallback to spatial detection if not on a tag
+	# 2. Priority 1: Occupant (GridBody2D / Prop / Entity)
+	if not target_node:
+		var occ: Node2D = Grid.get_occupant(grid_pos)
+		if occ and occ != GameState.player_ref:
+			target_node = occ
+
+	# 3. Priority 2: SubtextRegion (Carpet / Furniture / Zone)
 	if not target_node:
 		var layer_name: String = str(target_layer.name) if target_layer else ""
 		var region: Node2D = Grid.get_region_at(grid_pos, layer_name)
 		if region and region.has_method("is_pixel_opaque") and region.is_pixel_opaque(mouse_pos):
 			target_node = region
 
-	if not target_node:
-		var occ: Node2D = Grid.get_occupant(grid_pos)
-		if occ and occ != GameState.player_ref:
-			target_node = occ
-
+	# 4. Priority 3: Base TileMapLayer (Floor / Wall)
 	if not target_node and target_layer:
 		if target_layer.get("tags") != null or not Grid.get_cell_tags(grid_pos, target_layer.name).is_empty():
 			target_node = target_layer
