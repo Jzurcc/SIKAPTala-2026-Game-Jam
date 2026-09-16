@@ -214,9 +214,20 @@ for e in entities:
 
 ### Playbook 2: Adding a New Object / Prop / Hazard
 
-To create a new pushable or interactive object (e.g. `SpikeTrap`, `Mirror`, `HeavyBoulder`):
+There are two primary ways to create objects and props:
 
-#### Step 1: Create the Script Extending `GridBody2D`
+#### Option A: Creating a Textured Prop (`SubtextProp`) in `scenes/props/`
+For furniture and world decorations (beds, bookshelves, crates, vases, chests, etc.):
+1. Create a scene in `scenes/props/<name>.tscn` with a root `Node2D` attaching [`scripts/objects/subtext_prop.gd`](scripts/objects/subtext_prop.gd).
+2. Set the exported properties in the Inspector:
+   - `atlas_coords`: Vector2i tile coordinate on the tileset atlas.
+   - `atlas_size`: Dimensions in tiles (e.g. `(2, 2)` for a bed, `(1, 2)` for a bookshelf).
+   - `tags`: Initial tags (e.g. `["PASSABLE", "INTERACTABLE"]` or `["LIGHT"]`).
+   - `id` and `custom_dialogues`.
+3. `SubtextProp` automatically slices the region from `tileset.tres`, configures its `Sprite2D`, snaps to grid, and registers multi-cell occupancy with `Grid` and `GameState`.
+
+#### Option B: Creating a Custom Entity Extending `GridBody2D`
+For unique scripted mechanics (e.g. `SpikeTrap`, `Mirror`, `Portal`):
 ```gdscript
 class_name SpikeTrap
 extends GridBody2D
@@ -235,11 +246,7 @@ func _on_die() -> void:
 func can_be_pushed(dir: Vector2i) -> bool:
     return "LIGHT" in tags and not is_active
 ```
-
-#### Step 2: Create the Scene (`SpikeTrap.tscn`)
-- Root node: `Node2D` with `SpikeTrap.gd` attached.
-- Child node: `Sprite2D` or `AnimatedSprite2D`.
-- `GridBody2D` automatically handles grid snapping, occupancy registration, tween movement, and undo/redo support.
+Create the `.tscn` in `scenes/props/` or `scenes/objects/`. `GridBody2D` handles grid snapping, occupancy registration, tween movement, and undo/redo support.
 
 ---
 
