@@ -43,6 +43,12 @@ func convert_to_prop_if_unoccupied(pos: Vector2i, scene_root: Node) -> void:
 		var obj := Node2D.new()
 		obj.set_script(_world_object_script)
 		obj.z_index = 100
+		obj.set_meta("converted_from_tile", {
+			"layer_name": layer.name,
+			"pos": pos,
+			"source_id": source_id,
+			"atlas_coords": atlas_coords
+		})
 
 		var sprite := Sprite2D.new()
 		sprite.texture = source.texture

@@ -180,7 +180,7 @@ func _on_die_as_entity() -> void:
 	_scatter_tags()
 	GameState.unregister_entity(self)
 	Grid.vacate(grid_pos)
-	queue_free()
+	GameState.mark_dead(self)
 
 
 func _scatter_tags() -> void:

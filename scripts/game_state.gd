@@ -6,10 +6,21 @@ signal player_died
 signal player_moved(world_pos: Vector2)
 signal level_won
 
+class UndoSnapshot:
+	var player_pos: Vector2i = Vector2i.ZERO
+	var has_player: bool = false
+	var wall_tags: Dictionary = {}
+	var layer_tags: Dictionary = {}
+	var region_states: Array[Dictionary] = []
+	var entity_states: Array[Dictionary] = []
+	var object_states: Array[Dictionary] = []
+	var dirty_cells: Dictionary = {}
+
 var is_substrate: bool = false
 var is_tutorial_active: bool = false
 var tutorial_completed: bool = false
-var undo_stack: Array[Dictionary] = []
+var undo_stack: Array[UndoSnapshot] = []
+var _pending_death: Array[Node2D] = []
 
 var player_ref: Node2D = null
 var entities: Array[Node2D] = []
@@ -164,35 +175,63 @@ func has_harmful_at(pos: Vector2i) -> bool:
 	return false
 
 
+func mark_dead(node: Node2D) -> void:
+	if not is_instance_valid(node):
+		return
+	node.hide()
+	if not _pending_death.has(node):
+		_pending_death.append(node)
+
+
+func _flush_pending_death() -> void:
+	for node in _pending_death:
+		if is_instance_valid(node):
+			node.queue_free()
+	_pending_death.clear()
+
+
 func push_undo_state() -> void:
-	var snap: Dictionary = {}
+	var snap := UndoSnapshot.new()
 
 	if player_ref:
-		snap["p"] = player_ref.grid_pos
+		snap.has_player = true
+		snap.player_pos = player_ref.grid_pos
 
-	snap["wt"] = {}
 	for k in Grid.wall_tags:
-		snap["wt"][k] = Grid.wall_tags[k].duplicate()
+		snap.wall_tags[k] = Grid.wall_tags[k].duplicate()
 
-	var entity_snaps: Array = []
+	for pos in Grid.layer_tags:
+		snap.layer_tags[pos] = {}
+		for layer_name in Grid.layer_tags[pos]:
+			snap.layer_tags[pos][layer_name] = Grid.layer_tags[pos][layer_name].duplicate()
+
+	for r in Grid.regions:
+		if is_instance_valid(r):
+			snap.region_states.append({
+				"r": r,
+				"pos": r.position,
+				"tags": r.tags.duplicate()
+			})
+
 	for e in entities:
 		if is_instance_valid(e):
-			entity_snaps.append({
+			snap.entity_states.append({
 				"r": e,
 				"pos": e.grid_pos,
-				"t": e.get("tags").duplicate() if e.get("tags") != null else []
+				"t": e.get("tags").duplicate() if e.get("tags") != null else [],
+				"is_alive": e.get("is_alive") if "is_alive" in e else true
 			})
-	snap["e"] = entity_snaps
 
-	var obj_snaps: Array = []
 	for o in world_objects:
 		if is_instance_valid(o):
-			obj_snaps.append({
+			snap.object_states.append({
 				"r": o,
 				"pos": o.grid_pos,
 				"t": o.get("tags").duplicate() if o.get("tags") != null else []
 			})
-	snap["o"] = obj_snaps
+
+	if is_instance_valid(TileConverter):
+		snap.dirty_cells = TileConverter.flush_dirty_cells()
 
 	undo_stack.append(snap)
 
@@ -201,37 +240,99 @@ func pop_undo_state() -> void:
 	if undo_stack.is_empty():
 		return
 
-	var snap: Dictionary = undo_stack.pop_back()
+	var snap: UndoSnapshot = undo_stack.pop_back()
+
+	# 1. Restore dirty tilemap cells from TileConverter
+	if is_instance_valid(TileConverter) and not snap.dirty_cells.is_empty():
+		TileConverter.restore_dirty_cells(snap.dirty_cells)
+
+	# 2. Revert any dynamically converted tile-to-world_object nodes spawned since snapshot
+	var snap_obj_refs: Array = []
+	for o_data in snap.object_states:
+		snap_obj_refs.append(o_data["r"])
+	for i in range(world_objects.size() - 1, -1, -1):
+		var obj = world_objects[i]
+		if is_instance_valid(obj) and not obj in snap_obj_refs:
+			if obj.has_meta("converted_from_tile"):
+				var tdata: Dictionary = obj.get_meta("converted_from_tile")
+				for layer in solid_tilemaps:
+					if is_instance_valid(layer) and layer.name == tdata["layer_name"]:
+						layer.set_cell(tdata["pos"], tdata["source_id"], tdata["atlas_coords"])
+						break
+			world_objects.erase(obj)
+			Grid.vacate(obj.grid_pos)
+			obj.queue_free()
+
+	# 3. Revert any dynamically created SubtextRegions spawned since snapshot
+	var snap_region_refs: Array = []
+	for rdata in snap.region_states:
+		snap_region_refs.append(rdata["r"])
+	for i in range(Grid.regions.size() - 1, -1, -1):
+		var reg = Grid.regions[i]
+		if is_instance_valid(reg) and not reg in snap_region_refs:
+			Grid.regions.erase(reg)
+			reg.queue_free()
 
 	Grid.occupied.clear()
 
-	if player_ref and snap.has("p"):
-		player_ref.grid_pos = snap["p"]
+	# 4. Restore player position
+	if player_ref and snap.has_player:
+		player_ref.grid_pos = snap.player_pos
 		player_ref.position = Grid.grid_to_world(player_ref.grid_pos)
 		Grid.occupy(player_ref.grid_pos, player_ref)
 		player_moved.emit(player_ref.position)
 
+	# 5. Restore wall and layer tags
 	Grid.wall_tags.clear()
-	for k in snap["wt"]:
-		Grid.wall_tags[k] = snap["wt"][k].duplicate()
+	for k in snap.wall_tags:
+		Grid.wall_tags[k] = snap.wall_tags[k].duplicate()
 
-	for edata in snap["e"]:
+	Grid.layer_tags.clear()
+	for pos in snap.layer_tags:
+		Grid.layer_tags[pos] = {}
+		for layer_name in snap.layer_tags[pos]:
+			Grid.layer_tags[pos][layer_name] = snap.layer_tags[pos][layer_name].duplicate()
+
+	# 6. Restore regions
+	for rdata in snap.region_states:
+		var region = rdata["r"]
+		if is_instance_valid(region):
+			region.position = rdata["pos"]
+			if "tags" in region:
+				region.tags = rdata["tags"].duplicate()
+			if not Grid.regions.has(region):
+				Grid.regions.append(region)
+
+	# 7. Restore entities
+	for edata in snap.entity_states:
 		var e: Node2D = edata["r"]
 		if is_instance_valid(e):
 			e.grid_pos = edata["pos"]
 			e.position = Grid.grid_to_world(e.grid_pos)
 			if e.get("tags") != null:
 				e.tags = edata["t"].duplicate()
-			Grid.occupy(e.grid_pos, e)
+			var was_alive: bool = edata.get("is_alive", true)
+			if "is_alive" in e:
+				e.is_alive = was_alive
+			if was_alive:
+				e.show()
+				_pending_death.erase(e)
+				if not entities.has(e):
+					entities.append(e)
+				Grid.occupy(e.grid_pos, e)
+			else:
+				e.hide()
+				if not _pending_death.has(e):
+					_pending_death.append(e)
+				entities.erase(e)
 
-	for o_data in snap["o"]:
+	# 8. Restore world objects
+	for o_data in snap.object_states:
 		var obj: Node2D = o_data["r"]
 		if is_instance_valid(obj):
-			# Reset movement state so they don't slide back after undo
 			if "is_moving" in obj:
 				obj.is_moving = false
-			
-			# Kill any active tweens on the object to snap it back
+
 			var tweens = get_tree().get_processed_tweens()
 			for t in tweens:
 				if t.is_valid() and t.get_meta("target_node", null) == obj:
@@ -241,10 +342,18 @@ func pop_undo_state() -> void:
 			obj.position = Grid.grid_to_world(obj.grid_pos)
 			if obj.get("tags") != null:
 				obj.tags.assign(o_data["t"])
+			obj.show()
+			_pending_death.erase(obj)
+			if not world_objects.has(obj):
+				world_objects.append(obj)
 			Grid.occupy(obj.grid_pos, obj)
+
+	# 9. Refresh visual highlights and spatial tags
+	Grid.refresh_all_tags()
 
 
 func reset_state() -> void:
+	_flush_pending_death()
 	entities.clear()
 	world_objects.clear()
 	undo_stack.clear()

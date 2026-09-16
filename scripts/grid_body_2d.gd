@@ -99,7 +99,7 @@ func _tween_to(target_world: Vector2) -> void:
 func die() -> void:
 	_vacate_cells()
 	_on_die()
-	queue_free()
+	GameState.mark_dead(self)
 
 
 ## Override to handle cleanup before queue_free (e.g., unregister from GameState).
