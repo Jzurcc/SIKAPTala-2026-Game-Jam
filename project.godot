@@ -25,17 +25,18 @@ Grid="*res://scripts/grid.gd"
 GameState="*res://scripts/game_state.gd"
 SubtextOverlay="*res://scripts/subtext_overlay.gd"
 TagDisplayManager="*res://scripts/tag_display_manager.gd"
+AudioManager="*res://scripts/audio_manager.gd"
+SceneManager="*res://scripts/scene_manager.gd"
+TileConverter="*res://scripts/tile_converter.gd"
 
 [display]
 
 window/size/viewport_width=320
 window/size/viewport_height=180
 window/size/mode=3
-window/size/resizable=true
 window/size/window_width_override=1280
 window/size/window_height_override=720
 window/stretch/mode="canvas_items"
-window/stretch/aspect="keep"
 
 [input]
 

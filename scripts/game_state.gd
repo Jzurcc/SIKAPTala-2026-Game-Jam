@@ -9,23 +9,7 @@ signal level_won
 var is_substrate: bool = false
 var is_tutorial_active: bool = false
 var tutorial_completed: bool = false
-var is_transitioning: bool = false
 var undo_stack: Array[Dictionary] = []
-
-var bgm_player: AudioStreamPlayer
-var sfx_select: AudioStreamPlayer
-var sfx_deselect: AudioStreamPlayer
-var sfx_error: AudioStreamPlayer
-var bgm_playlist: Array[String] = [
-	"res://assets/music/bgm/punky-troll-oxcc-5-u.wav",
-	"res://assets/music/bgm/ooh-a-fly-wait-it-isn-t-tloagd.wav",
-	"res://assets/music/bgm/welcome-space-traveler-4-wct-1-b.wav"
-]
-var bgm_index: int = 0
-var lpf_tween: Tween
-
-var transition_layer: CanvasLayer
-var transition_rect: ColorRect
 
 var player_ref: Node2D = null
 var entities: Array[Node2D] = []
@@ -36,89 +20,31 @@ var solid_tilemaps: Array[TileMapLayer] = []
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
-	
-	transition_layer = CanvasLayer.new()
-	transition_layer.layer = 128
-	add_child(transition_layer)
-	
-	transition_rect = ColorRect.new()
-	transition_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-	transition_rect.color = Color(0, 0, 0, 0)
-	transition_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	transition_layer.add_child(transition_rect)
-	
-	bgm_player = AudioStreamPlayer.new()
-	bgm_player.bus = "BGM"
-	add_child(bgm_player)
-	bgm_player.finished.connect(_on_bgm_finished)
-	
-	sfx_select = AudioStreamPlayer.new()
-	sfx_select.stream = load("res://assets/music/sfx/select.wav")
-	add_child(sfx_select)
 
-	sfx_deselect = AudioStreamPlayer.new()
-	sfx_deselect.stream = load("res://assets/music/sfx/deselect.wav")
-	add_child(sfx_deselect)
 
-	sfx_error = AudioStreamPlayer.new()
-	sfx_error.stream = load("res://assets/music/sfx/error.wav")
-	add_child(sfx_error)
-
+## --- Audio & Transition forwarding stubs (delegate to AudioManager / SceneManager) ---
+## These exist so existing callers don't need updating immediately.
+## TODO: Update all callers to use AudioManager / SceneManager directly, then delete these.
 
 func start_gameplay_music() -> void:
-	if bgm_player.playing:
-		return
-	bgm_index = 0
-	_play_current_bgm()
+	AudioManager.start_gameplay_music()
 
 func play_select_sfx() -> void:
-	sfx_select.play()
+	AudioManager.play_select_sfx()
 
 func play_deselect_sfx() -> void:
-	sfx_deselect.play()
+	AudioManager.play_deselect_sfx()
 
 func play_error_sfx() -> void:
-	sfx_error.play()
-
+	AudioManager.play_error_sfx()
 
 func transition_to_scene(path: String, start_bgm: bool = false, fade_color: Color = Color.BLACK) -> void:
-	if is_transitioning: return
-	is_transitioning = true
-	
-	print("[GameState] Starting transition to: ", path)
-	transition_rect.color = fade_color
-	transition_rect.color.a = 0.0
-	
-	var tw = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	tw.tween_property(transition_rect, "color:a", 1.0, 0.8)
-	await tw.finished
-	print("[GameState] Fade out complete, changing scene...")
-	
-	reset_state()
-	get_tree().change_scene_to_file(path)
-	# Use process_always=true (second arg) so transition doesn't hang if game is paused
-	await get_tree().create_timer(1.0, true).timeout 
-	print("[GameState] Scene changed, fading in...")
-	
-	if start_bgm:
-		start_gameplay_music()
-		
-	tw = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	tw.tween_property(transition_rect, "color:a", 0.0, 0.8)
+	SceneManager.transition_to_scene(path, start_bgm, fade_color)
 
+var is_transitioning: bool:
+	get: return SceneManager.is_transitioning
 
-func _play_current_bgm() -> void:
-	var stream = load(bgm_playlist[bgm_index])
-	if stream is AudioStreamWAV:
-		stream.loop_mode = AudioStreamWAV.LOOP_DISABLED
-	bgm_player.stream = stream
-	bgm_player.play()
-
-
-func _on_bgm_finished() -> void:
-	bgm_index = (bgm_index + 1) % bgm_playlist.size()
-	await get_tree().create_timer(randf_range(2.0, 3.0)).timeout
-	_play_current_bgm()
+## --- END forwarding stubs ---
 
 
 func register_player(p: Node2D) -> void:
@@ -141,6 +67,10 @@ func register_object(o: Node2D) -> void:
 		world_objects.append(o)
 
 
+func unregister_object(o: Node2D) -> void:
+	world_objects.erase(o)
+
+
 func refresh_tilemaps() -> void:
 	solid_tilemaps.clear()
 	var root = get_tree().current_scene
@@ -150,15 +80,8 @@ func refresh_tilemaps() -> void:
 func _find_tilemaps_recursive(node: Node) -> void:
 	if node is TileMapLayer:
 		if not node in solid_tilemaps:
-			# Auto-attach script if missing
-			if node.get_script() == null:
-				if "Floor" in node.name:
-					node.set_script(load("res://scripts/floor_layer.gd"))
-				else:
-					node.set_script(load("res://scripts/wall_layer.gd"))
-			
-			# Use Z-index 1 for sorting layers, 0 for floors
-			if "Floor" in node.name:
+			# Set z-index by name convention (kept for visual layering, not collision logic)
+			if "Floor" in node.name or "Ground" in node.name:
 				node.z_index = 0
 			else:
 				node.z_index = 1
@@ -181,25 +104,12 @@ func toggle_substrate() -> void:
 	if not is_tutorial_active:
 		get_tree().paused = is_substrate
 	substrate_toggled.emit(is_substrate)
-	
+
 	if is_substrate:
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	else:
 		Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
-	
-	if lpf_tween:
-		lpf_tween.kill()
-		
-	var bus_idx = AudioServer.get_bus_index("BGM")
-	if bus_idx != -1 and AudioServer.get_bus_effect_count(bus_idx) > 0:
-		var effect = AudioServer.get_bus_effect(bus_idx, 0)
-		if effect is AudioEffectLowPassFilter:
-			lpf_tween = create_tween()
-			lpf_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-			var target_hz = 600.0 if is_substrate else 20000.0
-			var target_pitch = 0.8 if is_substrate else 1.0
-			lpf_tween.tween_property(effect, "cutoff_hz", target_hz, 0.25).set_trans(Tween.TRANS_SINE)
-			lpf_tween.parallel().tween_property(bgm_player, "pitch_scale", target_pitch, 0.25).set_trans(Tween.TRANS_SINE)
+	# AudioManager handles LPF via substrate_toggled signal connection
 
 
 func is_wall_at(pos: Vector2i) -> bool:
@@ -216,18 +126,17 @@ func is_tile_blocked(pos: Vector2i) -> bool:
 	if "IMPASSABLE" in global_tags:
 		return true
 
-	# Check tilemap layers
+	# Check tilemap layers — tag-based only, no name heuristics
 	for i in range(solid_tilemaps.size() - 1, -1, -1):
 		var layer = solid_tilemaps[i]
 		if layer.get_cell_source_id(pos) != -1:
-			var is_passable = false
 			if Grid.layer_tags.has(pos) and Grid.layer_tags[pos].has(layer.name):
 				var tags = Grid.layer_tags[pos][layer.name]
-				if "PASSABLE" in tags: is_passable = true
-				elif "IMPASSABLE" in tags: return true
-			
-			if not is_passable and layer.name.to_lower().contains("wall"):
-				return true
+				if "PASSABLE" in tags: continue
+				if "IMPASSABLE" in tags: return true
+			# Tile exists with no registered tags — treat as blocking
+			# (TaggedTileLayer always registers tags, so this catches untagged legacy tiles)
+			return true
 
 	# Check occupants for inherent blocking (if not already covered by PASSABLE tag)
 	var occupant = Grid.get_occupant(pos)

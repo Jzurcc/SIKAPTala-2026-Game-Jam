@@ -2,8 +2,8 @@
 
 [ext_resource type="TileSet" uid="uid://3e1s2qr6us1g" path="res://tileset.tres" id="1_ycayy"]
 [ext_resource type="PackedScene" uid="uid://b0gkamsn4tty2" path="res://scenes/player.tscn" id="2_bw6k5"]
-[ext_resource type="Script" uid="uid://cfj0faj0iytnw" path="res://scripts/wall_layer.gd" id="2_rurhu"]
-[ext_resource type="Script" uid="uid://d84ymd2q602r" path="res://scripts/floor_layer.gd" id="3_rurhu"]
+[ext_resource type="Script" uid="uid://cfj0faj0iytnw" path="res://scripts/tagged_tile_layer.gd" id="2_rurhu"]
+[ext_resource type="Script" uid="uid://d84ymd2q602r" path="res://scripts/tagged_tile_layer.gd" id="3_rurhu"]
 [ext_resource type="Script" uid="uid://c8qyug1wj41uf" path="res://scripts/camera.gd" id="3_y3j0m"]
 [ext_resource type="Script" uid="uid://ugyx3l3d66u2" path="res://scripts/subtext_region.gd" id="6_rurhu"]
 [ext_resource type="Script" uid="uid://dlkcii48b0n8h" path="res://scripts/camera_zone.gd" id="7_kk2rg"]
@@ -25,6 +25,7 @@ tile_set = ExtResource("1_ycayy")
 tile_map_data = PackedByteArray("AAAIAAYAAAAFAAoAAAAJAAYAAAAFAAoAAAAKAAYAAAAFAAoAAAALAAYAAAAFAAoAAAAMAAYAAAAFAAoAAAANAAYAAAAFAAoAAAAJAAIAAAAEAAwAAAAIAAIAAAAEAAwAAAAKAAIAAAAEAAkAAAALAAIAAAAEAAwAAAAMAAIAAAAEAAwAAAANAAIAAAAEAAwAAAAHAAIAAAAEAAkAAAAOAAYAAAAHAAoAAAAOAAUAAAADAAoAAAAOAAQAAAADAAoAAAAOAAIAAAAEAAoAAAAOAAMAAAADAAoAAAAHAAYAAAAFAAoAAAAGAAYAAAAGAAoAAAAGAAUAAAAGAAkAAAAGAAQAAAAGAAkAAAAGAAMAAAAGAAkAAAAGAAIAAAAIAAkAAAA=")
 tile_set = ExtResource("1_ycayy")
 script = ExtResource("2_rurhu")
+initial_tags = [0]
 id = "wall"
 custom_dialogues = Array[String](["It's just a wall...", "A boring wall.", "I'm talking to a wall..."])
 
@@ -32,6 +33,7 @@ custom_dialogues = Array[String](["It's just a wall...", "A boring wall.", "I'm 
 tile_map_data = PackedByteArray("AAAIAAQAAAABAAkAAAAIAAUAAAABAAkAAAAJAAQAAAABAAkAAAAJAAUAAAABAAkAAAAKAAQAAAABAAkAAAAKAAUAAAABAAkAAAALAAQAAAABAAkAAAALAAUAAAABAAkAAAAMAAQAAAABAAkAAAAMAAUAAAABAAkAAAANAAQAAAABAAkAAAANAAUAAAABAAkAAAAHAAQAAAABAAkAAAAHAAUAAAABAAkAAAAHAAMAAAABAAkAAAAIAAMAAAABAAkAAAAJAAMAAAABAAkAAAAKAAMAAAABAAkAAAALAAMAAAABAAkAAAAMAAMAAAABAAkAAAANAAMAAAABAAkAAAA=")
 tile_set = ExtResource("1_ycayy")
 script = ExtResource("3_rurhu")
+initial_tags = [2]
 id = "ground"
 custom_dialogues = Array[String](["It's just the ground...", "I can walk there.", "What did I expect? A floor."])
 

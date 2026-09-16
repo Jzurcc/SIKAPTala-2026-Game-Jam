@@ -369,38 +369,17 @@ func _update_pulsating_highlight(_delta: float) -> void:
 		last_highlighted.modulate.a = alpha
 
 func get_hovered_tile_layer(mouse_pos: Vector2, check_tags: bool = false) -> TileMapLayer:
-	var grid_pos = Grid.world_to_grid(mouse_pos)
+	var grid_pos := Grid.world_to_grid(mouse_pos)
 	for i in range(GameState.solid_tilemaps.size() - 1, -1, -1):
-		var layer = GameState.solid_tilemaps[i]
-		
+		var layer := GameState.solid_tilemaps[i]
+
 		if check_tags:
 			if not Grid.layer_tags.has(grid_pos) or not Grid.layer_tags[grid_pos].has(layer.name):
 				if not Grid.get_region_at(grid_pos):
 					continue
-		
-		var source_id = layer.get_cell_source_id(grid_pos)
-		if source_id != -1:
-			var atlas_coords = layer.get_cell_atlas_coords(grid_pos)
-			var source = layer.tile_set.get_source(source_id) as TileSetAtlasSource
-			if source:
-				var rect = source.get_tile_texture_region(atlas_coords)
-				var tile_data = source.get_tile_data(atlas_coords, 0)
-				var offset = Vector2(tile_data.texture_origin) if tile_data else Vector2.ZERO
-				var cell_center = Grid.grid_to_world(grid_pos)
-				var tex_center = cell_center - offset
-				var local_pos = mouse_pos - tex_center
-				var half_size = rect.size / 2.0
 
-				if local_pos.x >= -half_size.x and local_pos.x < half_size.x and \
-				   local_pos.y >= -half_size.y and local_pos.y < half_size.y:
-
-					var pixel_x = int(rect.position.x + local_pos.x + half_size.x)
-					var pixel_y = int(rect.position.y + local_pos.y + half_size.y)
-
-					var img = Grid.get_texture_image(source.texture)
-					if pixel_x >= 0 and pixel_y >= 0 and pixel_x < img.get_width() and pixel_y < img.get_height():
-						if img.get_pixel(pixel_x, pixel_y).a > 0.5:
-							return layer
+		if layer.get_cell_source_id(grid_pos) != -1:
+			return layer
 	return null
 
 func _highlight_layer_tile(layer: TileMapLayer, pos: Vector2i) -> void:

@@ -32,3 +32,5 @@ mono_crash.*.json
 *.md
 *.approj
 .claude/
+.agents/
+skills-lock.json

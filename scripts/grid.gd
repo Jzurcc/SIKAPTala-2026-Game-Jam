@@ -1,8 +1,8 @@
 extends Node
 
-enum TagTypes {
-	IMPASSABLE, LOCKED, PASSABLE, FRAGILE, HEAVY, LIGHT, INTERACTABLE
-}
+# Forward-alias to TagDef.Tag for backwards compatibility with .tscn exports.
+# Prefer TagDef.Tag in new code. Phase 1 migration: use TagDef directly.
+const TagTypes = TagDef.Tag
 
 const TILE_SIZE := 16
 
@@ -66,9 +66,6 @@ func set_wall_tags(pos: Vector2i, tags: Array) -> void:
 	else:
 		wall_tags[pos] = tags
 
-var world_object_script = preload("res://scripts/world_object.gd")
-
-var _is_refreshing: bool = false
 
 func add_wall_tag(pos: Vector2i, tag: String) -> void:
 	var t: Array = wall_tags.get(pos, [])
@@ -131,15 +128,22 @@ func refresh_all_tags() -> void:
 					for y in range(g_size.y):
 						add_wall_tag(obj.grid_pos + Vector2i(x, y), tag)
 				
-	# PASS 2: Handle conversions for any newly detected LIGHT tags
+	# PASS 2: Handle conversions for any newly detected LIGHT tags.
+	# TileConverter (Phase 4) owns this logic. Guard keeps game working during migration.
 	var targets = wall_tags.keys()
 	for pos in targets:
 		if "LIGHT" in wall_tags[pos]:
-			_try_convert_to_node(pos)
+			if Engine.has_singleton("TileConverter") or ClassDB.class_exists("TileConverter"):
+				TileConverter.convert_to_prop_if_unoccupied(pos, get_tree().current_scene if get_tree() else null)
+			else:
+				_legacy_try_convert_to_node(pos)
 
-func _try_convert_to_node(pos: Vector2i) -> void:
+
+# --- LEGACY: Remove in Phase 4 when TileConverter is created ---
+var _world_object_script = preload("res://scripts/world_object.gd")
+
+func _legacy_try_convert_to_node(pos: Vector2i) -> void:
 	if is_occupied(pos): return
-
 	for i in range(GameState.solid_tilemaps.size() - 1, -1, -1):
 		var layer = GameState.solid_tilemaps[i]
 		var source_id = layer.get_cell_source_id(pos)
@@ -148,44 +152,34 @@ func _try_convert_to_node(pos: Vector2i) -> void:
 			var source = layer.tile_set.get_source(source_id) as TileSetAtlasSource
 			if source:
 				var obj = Node2D.new()
-				obj.set_script(world_object_script)
-				obj.z_index = 100 # Visibility fix
-
+				obj.set_script(_world_object_script)
+				obj.z_index = 100
 				var sprite = Sprite2D.new()
 				sprite.texture = source.texture
 				sprite.region_enabled = true
 				sprite.region_rect = source.get_tile_texture_region(atlas_coords)
-				
 				var size_in_atlas = source.get_tile_size_in_atlas(atlas_coords)
 				obj.set("grid_size", size_in_atlas)
-				
 				var tile_data = source.get_tile_data(atlas_coords, 0)
 				var tex_offset = Vector2(tile_data.texture_origin) if tile_data else Vector2.ZERO
 				sprite.position = -tex_offset
-				
 				obj.add_child(sprite)
-
 				obj.position = grid_to_world(pos)
 				layer.add_sibling(obj)
-
 				if obj.get("tags") != null:
 					obj.tags.assign(wall_tags.get(pos, []))
-
-				# Region Capture: If a region was providing the LIGHT tag, move it to the object
 				for region in regions:
 					if is_instance_valid(region) and region.get_grid_rect().has_point(pos):
-						# Copy ID and Dialogues from the region
 						if region.id != "": obj.id = region.id
 						if region.custom_dialogues.size() > 0:
 							obj.custom_dialogues = region.custom_dialogues.duplicate()
-						
 						if "LIGHT" in region.tags:
 							region.reparent(obj)
 							region.position = Vector2.ZERO
 							break
-
 				layer.set_cell(pos, -1)
 				return
+# --- END LEGACY ---
 
 func isolate_tile_as_region(pos: Vector2i, layer_name: String) -> SubtextRegion:
 	var existing = get_region_at(pos, layer_name)

@@ -20,7 +20,8 @@ var tag_colors = {
 	"FLEEING": "#22ffaa",
 	"PUSHING": "#ff8800",
 	"HARMFUL": "#ff0000",
-	"HIDDEN": "#333333"
+	"HIDDEN": "#333333",
+	"INTERACTABLE": "#44ffdd",
 }
 
 var _labels: Array[Control] = []
