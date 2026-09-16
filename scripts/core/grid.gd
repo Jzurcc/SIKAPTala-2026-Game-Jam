@@ -36,6 +36,13 @@ func occupy(pos: Vector2i, node: Node2D) -> void:
 
 func vacate(pos: Vector2i) -> void:
 	occupied.erase(pos)
+	for obj: Node2D in GameState.world_objects:
+		if is_instance_valid(obj) and obj != GameState.player_ref:
+			var g_pos: Vector2i = obj.grid_pos
+			var g_size: Vector2i = obj.get("grid_size") if obj.get("grid_size") != null else Vector2i.ONE
+			if pos.x >= g_pos.x and pos.x < g_pos.x + g_size.x and pos.y >= g_pos.y and pos.y < g_pos.y + g_size.y:
+				occupied[pos] = obj
+				break
 
 
 func is_occupied(pos: Vector2i) -> bool:
@@ -43,7 +50,18 @@ func is_occupied(pos: Vector2i) -> bool:
 
 
 func get_occupant(pos: Vector2i) -> Node2D:
-	return occupied.get(pos, null)
+	var occ: Node2D = occupied.get(pos, null)
+	if occ != null and is_instance_valid(occ) and occ != GameState.player_ref:
+		return occ
+	for obj: Node2D in GameState.world_objects:
+		if is_instance_valid(obj) and obj != GameState.player_ref:
+			var g_pos: Vector2i = obj.grid_pos
+			var g_size: Vector2i = obj.get("grid_size") if obj.get("grid_size") != null else Vector2i.ONE
+			if pos.x >= g_pos.x and pos.x < g_pos.x + g_size.x and pos.y >= g_pos.y and pos.y < g_pos.y + g_size.y:
+				return obj
+	if occ != null and is_instance_valid(occ):
+		return occ
+	return null
 
 
 ## --- Regions ---

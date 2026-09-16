@@ -249,6 +249,19 @@ func get_bounding_rect() -> Rect2:
 	return Rect2(origin, size)
 
 
+func get_base_world_pos() -> Vector2:
+	var base_cell: Vector2i = Vector2i(grid_pos.x, grid_pos.y + grid_size.y - 1)
+	return Grid.grid_to_world(base_cell)
+
+
+func get_occupied_cells() -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	for x in range(grid_size.x):
+		for y in range(grid_size.y):
+			cells.append(grid_pos + Vector2i(x, y))
+	return cells
+
+
 func get_display_top_world_pos() -> Vector2:
 	var top_x: float = (float(grid_pos.x) + float(grid_size.x) * 0.5) * float(Grid.TILE_SIZE)
 	var top_y: float = float(grid_pos.y) * float(Grid.TILE_SIZE)

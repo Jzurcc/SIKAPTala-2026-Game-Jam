@@ -5,19 +5,33 @@ extends Area2D
 
 func _ready() -> void:
 	body_exited.connect(_on_body_exited)
+	area_exited.connect(_on_area_exited)
+
 
 func _on_body_exited(body: Node) -> void:
-	if GameState.is_transitioning: return
-	
-	print("[LevelExit] Body exited: ", body.name)
-	# Check if the body is the player
-	if body.name == "Player" or body.is_in_group("player"):
-		if body.get("is_dead") == true:
-			print("[LevelExit] Player is dead, ignoring exit.")
+	_trigger_exit(body)
+
+
+func _on_area_exited(area: Area2D) -> void:
+	_trigger_exit(area.get_parent() if area else null)
+
+
+func _trigger_exit(node: Node) -> void:
+	if GameState.is_transitioning:
+		return
+	if node == null:
+		return
+
+	if node.name == "Player" or node.is_in_group("player"):
+		if node.get("is_dead") == true:
 			return
-			
-		print("[LevelExit] Player detected! Transitioning to: ", next_scene)
+
 		if next_scene != "":
-			GameState.transition_to_scene(next_scene, true, fade_color)
+			var target_path: String = next_scene
+			if target_path.begins_with("uid://"):
+				var resolved: String = ResourceUID.get_id_path(ResourceUID.text_to_id(target_path))
+				if resolved != "":
+					target_path = resolved
+			GameState.transition_to_scene(target_path, true, fade_color)
 		else:
 			print("[LevelExit] WARNING: next_scene is empty!")

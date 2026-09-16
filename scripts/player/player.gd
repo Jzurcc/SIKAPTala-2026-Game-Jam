@@ -1,4 +1,4 @@
-extends Node2D
+extends CharacterBody2D
 
 @onready var anim_player: AnimatedSprite2D = $PlayerSprite
 @onready var anim_hair: AnimatedSprite2D = $HairSprite
@@ -59,7 +59,8 @@ func _setup_selector() -> void:
 	selector.texture = ImageTexture.create_from_image(img)
 	selector.modulate = Color(1, 1, 1, 0.0)
 	selector.top_level = true
-	selector.z_index = 5
+	selector.z_as_relative = false
+	selector.z_index = 4096
 	add_child(selector)
 
 
