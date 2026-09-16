@@ -93,10 +93,10 @@ static func get_property_rule(prop_name: String) -> RefCounted:
 ## Evaluates whether an actor can step into a cell/occupant with the given tags.
 static func can_enter(actor: Node2D, target_pos: Vector2i, tags: Array[String]) -> bool:
 	_ensure_initialized()
-	if "PASSABLE" in tags:
-		return true
 	if "IMPASSABLE" in tags or "SOLID" in tags:
 		return false
+	if "PASSABLE" in tags:
+		return true
 	for tag: String in tags:
 		var rule: TagRule = _rules.get(tag, null)
 		if rule != null and not rule.can_enter(actor, target_pos, tags):

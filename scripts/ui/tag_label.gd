@@ -242,22 +242,17 @@ func get_hovered_tag_index(mouse_pos: Vector2, use_shrink: bool = false) -> int:
 			return i
 	return -1
 
+func get_total_label_rect() -> Rect2:
+	if _labels.is_empty():
+		return Rect2(global_position - Vector2(16, 8), Vector2(32, 16))
+	var total_rect: Rect2 = _labels[0].get_global_rect()
+	for i in range(1, _labels.size()):
+		total_rect = total_rect.merge(_labels[i].get_global_rect())
+	return total_rect.grow(4.0)
+
+
 func is_mouse_over_label_area(mouse_pos: Vector2) -> bool:
-	if _labels.is_empty(): return false
-	var rects: Array[Rect2] = []
-	for label in _labels:
-		var r = label.get_global_rect()
-		# Use 50% center for sticky lock-on area
-		var shrink = r.size.x * 0.25
-		r.position.x += shrink
-		r.size.x -= shrink * 2
-		rects.append(r)
-	
-	var total_rect = rects[0]
-	for i in range(1, rects.size()):
-		total_rect = total_rect.merge(rects[i])
-		
-	return total_rect.grow(2.0).has_point(mouse_pos)
+	return get_total_label_rect().has_point(mouse_pos)
 
 func set_replacement_pulse(index: int) -> void:
 	_pulsating_idx = index

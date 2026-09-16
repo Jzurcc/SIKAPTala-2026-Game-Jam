@@ -39,6 +39,11 @@ func _get_or_create_sprite() -> Sprite2D:
 	return _sprite
 
 
+func _ready() -> void:
+	grid_size = atlas_size
+	super._ready()
+
+
 func _on_ready() -> void:
 	_get_or_create_sprite()
 	_update_visuals()
@@ -47,12 +52,7 @@ func _on_ready() -> void:
 		return
 
 	z_index = 100
-	grid_size = atlas_size
 
-	_vacate_cells()
-	_occupy_cells()
-
-	GameState.register_object(self)
 
 
 func _on_die() -> void:

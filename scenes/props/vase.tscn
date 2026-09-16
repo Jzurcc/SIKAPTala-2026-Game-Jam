@@ -10,4 +10,4 @@ atlas_coords = Vector2i(49, 19)
 atlas_size = Vector2i(1, 1)
 id = "vase"
 custom_dialogues = Array[String](["A fragile ceramic vase."])
-tags = Array[String](["LIGHT"])
+tags = Array[String](["IMPASSABLE", "LIGHT", "FRAGILE"])

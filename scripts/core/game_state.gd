@@ -133,43 +133,27 @@ func is_wall_at(pos: Vector2i) -> bool:
 
 
 func is_tile_blocked(pos: Vector2i) -> bool:
-	var global_tags: Array[String] = TagRegistry.extract_tag_names(Grid.get_wall_tags(pos))
-
-	if "PASSABLE" in global_tags:
-		return false
-	if not TagRegistry.can_enter(player_ref, pos, global_tags):
-		return true
-
-	# Check tilemap layers — tag-based only
+	# 1. Check tilemap layers — if ANY present layer is impassable, tile is blocked
 	for i in range(solid_tilemaps.size() - 1, -1, -1):
 		var layer: TileMapLayer = solid_tilemaps[i]
 		if is_instance_valid(layer) and layer.get_cell_source_id(pos) != -1:
-			if Grid.layer_tags.has(pos) and Grid.layer_tags[pos].has(layer.name):
-				var l_tags: Array[String] = TagRegistry.extract_tag_names(Grid.layer_tags[pos][layer.name])
-				if "PASSABLE" in l_tags:
-					continue
-				if not TagRegistry.can_enter(player_ref, pos, l_tags):
-					return true
+			var l_tags: Array[String] = []
+			if Grid.cell_tag_overrides.has(pos) and Grid.cell_tag_overrides[pos].has(layer.name):
+				l_tags = TagRegistry.extract_tag_names(Grid.cell_tag_overrides[pos][layer.name])
+			elif Grid.layer_tags.has(pos) and Grid.layer_tags[pos].has(layer.name):
+				l_tags = TagRegistry.extract_tag_names(Grid.layer_tags[pos][layer.name])
 			elif layer.get("tags") != null:
-				var l_tags: Array[String] = TagRegistry.extract_tag_names(layer.tags)
-				if "PASSABLE" in l_tags:
-					continue
-				if not TagRegistry.can_enter(player_ref, pos, l_tags):
-					return true
+				l_tags = TagRegistry.extract_tag_names(layer.tags)
 
-	# Check occupant for inherent blocking
-	var occupant: Node2D = Grid.get_occupant(pos)
-	if occupant != null and occupant != player_ref:
-		var occ_tags: Array[String] = TagRegistry.extract_tag_names(occupant.get("tags"))
+			if not l_tags.is_empty() and not TagRegistry.can_enter(player_ref, pos, l_tags):
+				return true
 
-		if "PASSABLE" in occ_tags:
-			return false
-		if not TagRegistry.can_enter(player_ref, pos, occ_tags):
-			return true
-
-		var has_fragile: bool = ("FRAGILE" in occ_tags)
-		if not occupant.has_method("push") and not has_fragile:
-			return true
+	# 2. Check region overrides
+	for region: Node2D in Grid.regions:
+		if is_instance_valid(region) and region.get_grid_rect().has_point(pos):
+			var r_tags: Array[String] = TagRegistry.extract_tag_names(region.get("tags"))
+			if not r_tags.is_empty() and not TagRegistry.can_enter(player_ref, pos, r_tags):
+				return true
 
 	return false
 

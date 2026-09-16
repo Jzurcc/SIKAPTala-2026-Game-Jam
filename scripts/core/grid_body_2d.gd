@@ -240,3 +240,15 @@ func add_subtext_tag(tag: Variant) -> bool:
 func remove_subtext_tag(tag: Variant) -> bool:
 	var tag_name: String = tag.name if (tag is RefCounted and tag.get("name") != null) else str(tag)
 	return remove_tag(tag_name)
+
+
+func get_bounding_rect() -> Rect2:
+	var origin: Vector2 = Vector2(grid_pos * Grid.TILE_SIZE)
+	var size: Vector2 = Vector2(grid_size * Grid.TILE_SIZE)
+	return Rect2(origin, size)
+
+
+func get_display_top_world_pos() -> Vector2:
+	var top_x: float = (float(grid_pos.x) + float(grid_size.x) * 0.5) * float(Grid.TILE_SIZE)
+	var top_y: float = float(grid_pos.y) * float(Grid.TILE_SIZE)
+	return Vector2(top_x, top_y)

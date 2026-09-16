@@ -137,8 +137,25 @@ func _process(delta: float) -> void:
 	var has_content: bool = false
 	var is_locked: bool = false
 
-	if is_selected and hover_label.is_mouse_over_label_area(mouse_pos):
-		is_locked = true
+	# Generous lock-on area: keep target active while mouse is over the target, label, or intermediate area
+	if is_selected and is_instance_valid(last_highlighted):
+		var target_bounds: Rect2
+		if last_highlighted.has_method("get_bounding_rect"):
+			target_bounds = last_highlighted.get_bounding_rect()
+		elif last_highlighted is SubtextRegion:
+			var r_rect: Rect2i = last_highlighted.get_grid_rect()
+			target_bounds = Rect2(Vector2(r_rect.position * Grid.TILE_SIZE), Vector2(r_rect.size * Grid.TILE_SIZE))
+		elif last_highlighted is TileMapLayer:
+			var g_pos: Vector2i = Grid.world_to_grid(_target_world_pos)
+			target_bounds = Rect2(Vector2(g_pos * Grid.TILE_SIZE), Vector2(Grid.TILE_SIZE, Grid.TILE_SIZE))
+		else:
+			target_bounds = Rect2(last_highlighted.global_position - Vector2(8, 8), Vector2(16, 16))
+
+		var label_bounds: Rect2 = hover_label.get_total_label_rect()
+		var combined_zone: Rect2 = target_bounds.merge(label_bounds).grow(4.0)
+
+		if combined_zone.has_point(mouse_pos):
+			is_locked = true
 
 	if is_locked:
 		tags = current_tags.duplicate()
@@ -162,7 +179,10 @@ func _process(delta: float) -> void:
 			tile_highlight_sprite.visible = false
 			if occupant.get("tags") != null:
 				tags = occupant.tags.duplicate()
-			_target_world_pos = occupant.global_position
+			if occupant.has_method("get_display_top_world_pos"):
+				_target_world_pos = occupant.get_display_top_world_pos()
+			else:
+				_target_world_pos = occupant.global_position
 			has_content = true
 		# 2. SubtextRegion (Carpet / Furniture / Zone)
 		elif region != null:
