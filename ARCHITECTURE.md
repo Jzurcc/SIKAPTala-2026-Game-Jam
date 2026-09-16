@@ -317,9 +317,56 @@ register_rule("WANDERING", TagWandering.new())
 
 ---
 
+### Playbook 5: Adding a Tag Property / Modifier (The Interceptor Pattern)
+
+Tags themselves can have modular **Tag Properties** (modifiers/traits) that alter how tags are dragged, rendered, or decayed, without adding hardcoded boolean flags or scattered `if` statements across UI and gameplay code.
+
+```mermaid
+flowchart LR
+    Drag[DragController] -->|can_drag_tag?| TR[TagRegistry Dispatcher]
+    Display[TagDisplayManager] -->|can_render_tag?| TR
+    Turn[GameState Turn] -->|tick_tag?| TR
+
+    TR -->|Dispatches to| P1[PropLocked: can_drag -> false]
+    TR -->|Dispatches to| P2[PropHidden: can_render -> false]
+    TR -->|Dispatches to| P3[PropAnchored: proximity check]
+    TR -->|Dispatches to| P4[PropBrittle: on_host_contact]
+```
+
+#### Supported Tag Property Catalog:
+
+| Property | Behavior | Status |
+|---|---|---|
+| **`LOCKED`** | Tag cannot be dragged or detached from the host object. | Active |
+| **`HIDDEN`** | Tag is invisible in Subtext view until revealed by a lens/action. | Active |
+| **`ANCHORED`** | Tag can only be dragged if the player stands adjacent to the host. | Active |
+| **`VOLATILE`** | Snaps back to origin after $N$ turns (displacement budget). | *Placeholder Specification* |
+| **`EXPIRING`** | Has a turn counter; decays and dissolves when depleted. | *Placeholder Specification* |
+| **`DORMANT`** | Tag is inactive until an in-game trigger/condition activates it. | Active |
+| **`SPREADING`** | Replicates the tag onto any object the host touches. | Active |
+| **`BRITTLE`** | Tag shatters and disappears if the host is pushed or hit. | Active |
+
+#### Adding a New Tag Property Strategy:
+1. Create a strategy in `scripts/tags/properties/prop_<name>.gd` implementing hooks:
+```gdscript
+class_name PropAnchored
+extends RefCounted
+
+func can_drag(tag: SubtextTag, drag_pos: Vector2i, player_pos: Vector2i) -> bool:
+    var dist = (drag_pos - player_pos).abs()
+    return (dist.x + dist.y) <= 1 # Must be adjacent!
+```
+2. Register in `TagRegistry`:
+```gdscript
+TagRegistry.register_property_rule("ANCHORED", PropAnchored.new())
+```
+
+---
+
 ## 6. GDScript 4 Best Practices & Engineering Standards
 
 1. **Strict Static Typing**: Always explicitly type variables, parameters, and return types (`var pos: Vector2i = ...`). Never rely on `:=` when the RHS expression returns a `Variant` (e.g., `event.keycode`, `get_global_mouse_position()`, `lerp()`).
 2. **Node Names are `StringName`**: When doing ternary expressions with strings, always cast node names: `str(layer.name) if layer else ""`.
 3. **Symmetrical Registration**: Every object that registers on `_ready()` MUST unregister on `_exit_tree()` or `die()` (`GameState.unregister_object()`, `Grid.vacate()`).
 4. **Deferred Tile Conversions**: Use `TileConverter.convert_to_prop_if_unoccupied()` when converting static tiles into interactive objects at runtime.
+5. **Interceptor Strategy Pattern**: Never check tag properties with scattered `if` statements across UI scripts. Always query `TagRegistry` dispatch methods (`can_drag_tag`, `can_render_tag`).
