@@ -87,7 +87,7 @@ func convert_to_prop_if_unoccupied(pos: Vector2i, scene_root: Node) -> void:
 
 ## Builds a Sprite2D from a tilemap cell. Used by SubtextRegion and TagDisplayManager
 ## for highlight sprites — single canonical implementation of atlas-rect extraction.
-static func build_sprite_from_tile(layer: TileMapLayer, pos: Vector2i, image_cache: Dictionary = {}) -> Sprite2D:
+static func build_sprite_from_tile(layer: TileMapLayer, pos: Vector2i, _image_cache: Dictionary = {}) -> Sprite2D:
 	var source_id := layer.get_cell_source_id(pos)
 	if source_id == -1:
 		return null

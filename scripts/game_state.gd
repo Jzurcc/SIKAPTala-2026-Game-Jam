@@ -2,8 +2,10 @@ extends Node
 
 signal turn_processed
 signal substrate_toggled(active: bool)
+@warning_ignore("unused_signal")
 signal player_died
 signal player_moved(world_pos: Vector2)
+@warning_ignore("unused_signal")
 signal level_won
 
 class UndoSnapshot:

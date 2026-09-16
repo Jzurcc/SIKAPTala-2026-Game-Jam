@@ -109,7 +109,6 @@ func refresh_all_tags() -> void:
 	for region in regions:
 		if is_instance_valid(region):
 			var rect = region.get_grid_rect()
-			var layer = region.get_effective_layer_name()
 			for x in range(rect.size.x):
 				for y in range(rect.size.y):
 					var pos = rect.position + Vector2i(x, y)

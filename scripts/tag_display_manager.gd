@@ -144,7 +144,8 @@ func _process(delta: float) -> void:
 		if top_layer == null:
 			top_layer = get_hovered_tile_layer(mouse_pos, false)
 
-		var region: Node2D = Grid.get_region_at(grid_pos, top_layer.name if top_layer else "")
+		var layer_name: String = str(top_layer.name) if top_layer else ""
+		var region: Node2D = Grid.get_region_at(grid_pos, layer_name)
 
 		if region != null:
 			var target: String = region.get_effective_layer_name() if region.has_method("get_effective_layer_name") else ""

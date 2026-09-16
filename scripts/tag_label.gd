@@ -96,7 +96,7 @@ func setup(tags: Array) -> void:
 			label.pivot_offset = label.size / 2.0
 			label.gui_input.connect(_on_tag_gui_input.bind(label))
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	if _labels.is_empty(): return
 	
 	var mouse_pos = get_global_mouse_position()

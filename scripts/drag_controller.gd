@@ -150,7 +150,8 @@ func handle_drop(mouse_pos: Vector2, hover_label: TagLabel, last_highlighted: No
 
 	# 2. Fallback to spatial detection if not on a tag
 	if not target_node:
-		var region: Node2D = Grid.get_region_at(grid_pos, target_layer.name if target_layer else "")
+		var layer_name: String = str(target_layer.name) if target_layer else ""
+		var region: Node2D = Grid.get_region_at(grid_pos, layer_name)
 		if region and region.has_method("is_pixel_opaque") and region.is_pixel_opaque(mouse_pos):
 			target_node = region
 
