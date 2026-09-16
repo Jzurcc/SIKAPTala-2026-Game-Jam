@@ -1,13 +1,9 @@
-[gd_scene format=4 uid="uid://bxki1nnwh8a8y"]
+[gd_scene format=4]
 
-[ext_resource type="TileSet" uid="uid://3e1s2qr6us1g" path="res://tileset.tres" id="1_wo48x"]
-[ext_resource type="Script" uid="uid://cfj0faj0iytnw" path="res://scripts/objects/tagged_tile_layer.gd" id="2_y0kc7"]
-[ext_resource type="Script" uid="uid://d84ymd2q602r" path="res://scripts/objects/tagged_tile_layer.gd" id="3_ne2mo"]
-[ext_resource type="Script" uid="uid://ugyx3l3d66u2" path="res://scripts/objects/subtext_region.gd" id="4_6cvei"]
-[ext_resource type="PackedScene" uid="uid://b0gkamsn4tty2" path="res://scenes/player.tscn" id="5_que50"]
-[ext_resource type="Script" uid="uid://c8qyug1wj41uf" path="res://scripts/objects/camera.gd" id="6_hey2k"]
-[ext_resource type="Script" uid="uid://bw2muqrhk82u2" path="res://scripts/objects/level_exit.gd" id="7_y0kc7"]
-[ext_resource type="Script" uid="uid://dlkcii48b0n8h" path="res://scripts/objects/camera_zone.gd" id="8_ne2mo"]
+[ext_resource type="TileSet" path="res://tileset.tres" id="1_wo48x"]
+[ext_resource type="PackedScene" path="res://scenes/props/crate.tscn" id="3_eqxsl"]
+[ext_resource type="PackedScene" path="res://scenes/props/vase.tscn" id="4_b4j7a"]
+[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="5_que50"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ne2mo"]
 size = Vector2(552, 280)
@@ -27,60 +23,30 @@ tile_set = ExtResource("1_wo48x")
 [node name="Interior Walls" type="TileMapLayer" parent="." unique_id=111502272]
 tile_map_data = PackedByteArray("AAAIAAYAAAAFAAoAAAAJAAYAAAAFAAoAAAAKAAYAAAAFAAoAAAALAAYAAAAFAAoAAAAMAAYAAAAFAAoAAAANAAYAAAAFAAoAAAAJAAIAAAAEAAwAAAAIAAIAAAAEAAwAAAAKAAIAAAAEAAkAAAALAAIAAAAEAAwAAAAMAAIAAAAEAAwAAAANAAIAAAAEAAwAAAAHAAIAAAAEAAkAAAAOAAYAAAAFAAoAAAAOAAIAAAAEAAoAAAAHAAYAAAAFAAoAAAAGAAYAAAAGAAoAAAAGAAUAAAAGAAkAAAAGAAQAAAAGAAkAAAAGAAMAAAAGAAkAAAAGAAIAAAAIAAkAAAAPAAYAAAAFAAoAAAAQAAYAAAAFAAoAAAARAAYAAAAFAAoAAAASAAYAAAAFAAoAAAATAAYAAAAFAAoAAAAUAAYAAAAFAAoAAAAOAAMAAAADAAoAAAAOAAQAAAADAAkAAAAPAAQAAAAEAAkAAAAQAAQAAAAEAAkAAAARAAQAAAAEAAkAAAASAAQAAAAEAAkAAAATAAQAAAAEAAkAAAAUAAQAAAAEAAkAAAAVAAQAAAAEAAkAAAAWAAQAAAAEAAkAAAAXAAQAAAAEAAkAAAAYAAQAAAAEAAkAAAAZAAQAAAAEAAkAAAAaAAQAAAAIAAkAABAaAAUAAAADAAoAAAAaAAYAAAADAAoAAAAaAAcAAAADAAoAAAAaAAgAAAADAAoAAAAVAAYAAAABAAoAABAVAAcAAAADAAoAADAVAAgAAAADAAoAADAWAAkAAAAFAAoAAAAXAAkAAAAFAAoAAAAYAAkAAAAMAAsAAAAZAAkAAAAFAAoAAAAVAAkAAAAGAAoAAAAaAAkAAAAHAAoAAAA=")
 tile_set = ExtResource("1_wo48x")
-script = ExtResource("2_y0kc7")
-initial_tags = [0]
-initial_tags = Array[int]([0, 1])
-id = "wall"
-custom_dialogues = Array[String](["It's just a wall...", "A boring wall.", "I'm talking to a wall..."])
 
 [node name="SubtextRegion" type="Node2D" parent="Interior Walls" unique_id=1034958725]
 position = Vector2(384, 144)
-script = ExtResource("4_6cvei")
-tags_enum = Array[int]([5])
-id = "door"
 metadata/_custom_type_script = "uid://ugyx3l3d66u2"
 
 [node name="Interior Ground" type="TileMapLayer" parent="." unique_id=1261930248]
 tile_map_data = PackedByteArray("AAAIAAQAAAABAAkAAAAIAAUAAAABAAkAAAAJAAQAAAABAAkAAAAJAAUAAAABAAkAAAAKAAQAAAABAAkAAAAKAAUAAAABAAkAAAALAAQAAAABAAkAAAALAAUAAAABAAkAAAAMAAQAAAABAAkAAAAMAAUAAAABAAkAAAANAAQAAAABAAkAAAANAAUAAAABAAkAAAAHAAQAAAABAAkAAAAHAAUAAAABAAkAAAAHAAMAAAABAAkAAAAIAAMAAAABAAkAAAAJAAMAAAABAAkAAAAKAAMAAAABAAkAAAALAAMAAAABAAkAAAAMAAMAAAABAAkAAAANAAMAAAABAAkAAAAOAAUAAAABAAkAAAAPAAUAAAABAAkAAAAQAAUAAAABAAkAAAARAAUAAAABAAkAAAASAAUAAAABAAkAAAATAAUAAAABAAkAAAAUAAUAAAABAAkAAAAVAAUAAAABAAkAAAAWAAUAAAABAAkAAAAXAAUAAAABAAkAAAAYAAUAAAABAAkAAAAZAAUAAAABAAkAAAAZAAYAAAABAAkAAAAZAAcAAAABAAkAAAAZAAgAAAABAAkAAAAYAAgAAAABAAkAAAAXAAgAAAABAAkAAAAWAAgAAAABAAkAAAAWAAcAAAABAAkAAAAXAAcAAAABAAkAAAAXAAYAAAABAAkAAAAWAAYAAAABAAkAAAAYAAYAAAABAAkAAAAYAAcAAAABAAkAAAA=")
 tile_set = ExtResource("1_wo48x")
-script = ExtResource("3_ne2mo")
-initial_tags = [2]
-initial_tags = Array[int]([2, 1])
-id = "ground"
-custom_dialogues = Array[String](["It's just the ground...", "I can walk there.", "What did I expect? A floor."])
 
 [node name="Furniture" type="TileMapLayer" parent="." unique_id=1989940892]
-tile_map_data = PackedByteArray("AAAJAAMAAAAxABMAAAAOAAUAAAAnAAoAAAA=")
+tile_map_data = PackedByteArray("AAAJAAMA//////////8OAAUA//////////8=")
 tile_set = ExtResource("1_wo48x")
 
-[node name="Crate" type="Node2D" parent="Furniture" unique_id=221534323]
-position = Vector2(224, 80)
-script = ExtResource("4_6cvei")
-tags_enum = Array[int]([0])
-id = "crate"
-metadata/_custom_type_script = "uid://ugyx3l3d66u2"
-
-[node name="SubtextRegion" type="Node2D" parent="Furniture" unique_id=1361341477]
-position = Vector2(144, 48)
-script = ExtResource("4_6cvei")
-tags_enum = Array[int]([5])
-id = "vase"
-metadata/_custom_type_script = "uid://ugyx3l3d66u2"
-
-[node name="Player" parent="." unique_id=299729164 instance=ExtResource("5_que50")]
+[node name="Player" type="CharacterBody2D" parent="." unique_id=299729164 instance=ExtResource("5_que50")]
 position = Vector2(168, 72)
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=635707572]
 position = Vector2(176, 80)
 limit_right = 10000083
 limit_bottom = 10000001
-script = ExtResource("6_hey2k")
 
 [node name="Area2D2" type="Area2D" parent="." unique_id=726471765]
 visible = false
 position = Vector2(128, 48)
-script = ExtResource("7_y0kc7")
-next_scene = "uid://ciiq4w28nn2yg"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D2" unique_id=304537188]
 position = Vector2(172, 68)
@@ -88,8 +54,6 @@ shape = SubResource("RectangleShape2D_ne2mo")
 
 [node name="Area2D" type="Area2D" parent="." unique_id=140243154]
 position = Vector2(160, 64)
-script = ExtResource("8_ne2mo")
-camera_zoom = Vector2(1.25, 1.25)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D" unique_id=1119233637]
 position = Vector2(8, 8)
@@ -97,8 +61,12 @@ shape = SubResource("RectangleShape2D_6cvei")
 
 [node name="Area2D3" type="Area2D" parent="." unique_id=540100553]
 position = Vector2(384, 112)
-script = ExtResource("8_ne2mo")
-camera_zoom = Vector2(1.25, 1.25)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D3" unique_id=1843862858]
 shape = SubResource("RectangleShape2D_que50")
+
+[node name="Crate" type="Node2D" parent="." unique_id=1619950467 instance=ExtResource("3_eqxsl")]
+position = Vector2(232, 88)
+
+[node name="Vase" type="Node2D" parent="." unique_id=1092372818 instance=ExtResource("4_b4j7a")]
+position = Vector2(152, 56)

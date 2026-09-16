@@ -1,13 +1,9 @@
-[gd_scene format=4 uid="uid://dgjrlrr3uno32"]
+[gd_scene format=4]
 
-[ext_resource type="TileSet" uid="uid://3e1s2qr6us1g" path="res://tileset.tres" id="1_ycayy"]
-[ext_resource type="PackedScene" uid="uid://b0gkamsn4tty2" path="res://scenes/player.tscn" id="2_bw6k5"]
-[ext_resource type="Script" uid="uid://cfj0faj0iytnw" path="res://scripts/objects/tagged_tile_layer.gd" id="2_rurhu"]
-[ext_resource type="Script" uid="uid://d84ymd2q602r" path="res://scripts/objects/tagged_tile_layer.gd" id="3_rurhu"]
-[ext_resource type="Script" uid="uid://c8qyug1wj41uf" path="res://scripts/objects/camera.gd" id="3_y3j0m"]
-[ext_resource type="Script" uid="uid://ugyx3l3d66u2" path="res://scripts/objects/subtext_region.gd" id="6_rurhu"]
-[ext_resource type="Script" uid="uid://dlkcii48b0n8h" path="res://scripts/objects/camera_zone.gd" id="7_kk2rg"]
-[ext_resource type="Script" uid="uid://bw2muqrhk82u2" path="res://scripts/objects/level_exit.gd" id="8_b5spy"]
+[ext_resource type="TileSet" path="res://tileset.tres" id="1_ycayy"]
+[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="2_bw6k5"]
+[ext_resource type="PackedScene" path="res://scenes/props/bed.tscn" id="9_bed"]
+[ext_resource type="PackedScene" path="res://scenes/props/bookshelf.tscn" id="10_shelf"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_b5spy"]
 size = Vector2(112, 48)
@@ -24,69 +20,32 @@ tile_set = ExtResource("1_ycayy")
 [node name="Interior Walls" type="TileMapLayer" parent="." unique_id=690301795]
 tile_map_data = PackedByteArray("AAAIAAYAAAAFAAoAAAAJAAYAAAAFAAoAAAAKAAYAAAAFAAoAAAALAAYAAAAFAAoAAAAMAAYAAAAFAAoAAAANAAYAAAAFAAoAAAAJAAIAAAAEAAwAAAAIAAIAAAAEAAwAAAAKAAIAAAAEAAkAAAALAAIAAAAEAAwAAAAMAAIAAAAEAAwAAAANAAIAAAAEAAwAAAAHAAIAAAAEAAkAAAAOAAYAAAAHAAoAAAAOAAUAAAADAAoAAAAOAAQAAAADAAoAAAAOAAIAAAAEAAoAAAAOAAMAAAADAAoAAAAHAAYAAAAFAAoAAAAGAAYAAAAGAAoAAAAGAAUAAAAGAAkAAAAGAAQAAAAGAAkAAAAGAAMAAAAGAAkAAAAGAAIAAAAIAAkAAAA=")
 tile_set = ExtResource("1_ycayy")
-script = ExtResource("2_rurhu")
-initial_tags = [0]
-id = "wall"
-custom_dialogues = Array[String](["It's just a wall...", "A boring wall.", "I'm talking to a wall..."])
 
 [node name="Interior Ground" type="TileMapLayer" parent="." unique_id=175534154]
 tile_map_data = PackedByteArray("AAAIAAQAAAABAAkAAAAIAAUAAAABAAkAAAAJAAQAAAABAAkAAAAJAAUAAAABAAkAAAAKAAQAAAABAAkAAAAKAAUAAAABAAkAAAALAAQAAAABAAkAAAALAAUAAAABAAkAAAAMAAQAAAABAAkAAAAMAAUAAAABAAkAAAANAAQAAAABAAkAAAANAAUAAAABAAkAAAAHAAQAAAABAAkAAAAHAAUAAAABAAkAAAAHAAMAAAABAAkAAAAIAAMAAAABAAkAAAAJAAMAAAABAAkAAAAKAAMAAAABAAkAAAALAAMAAAABAAkAAAAMAAMAAAABAAkAAAANAAMAAAABAAkAAAA=")
 tile_set = ExtResource("1_ycayy")
-script = ExtResource("3_rurhu")
-initial_tags = [2]
-id = "ground"
-custom_dialogues = Array[String](["It's just the ground...", "I can walk there.", "What did I expect? A floor."])
 
 [node name="Furniture" type="TileMapLayer" parent="." unique_id=1275368969]
-tile_map_data = PackedByteArray("AAAMAAYAAAAOAAwAAAAJAAYAAAAOAA0AAAANAAMAAAAtACMAAAAMAAMAAAAsACMAAAALAAUAAAArACUAAAAMAAUAAAAsACUAAAANAAUAAAAtACUAAAALAAMAAAArACMAAAALAAQAAAArACQAAAAMAAQAAAAsACQAAAANAAQAAAAtACQAAAAHAAIAAAAoACEAAAAHAAMAAAAoACIAAAAIAAIAAAApACEAAAAIAAMAAAApACIAAAAJAAIAAAAqACEAAAAJAAMAAAAqACIAAAA=")
+tile_map_data = PackedByteArray("AAAMAAYAAAAOAAwAAAAJAAYAAAAOAA0AAAANAAMAAAAtACMAAAAMAAMAAAAsACMAAAALAAUAAAArACUAAAAMAAUAAAAsACUAAAANAAUAAAAtACUAAAALAAMAAAArACMAAAALAAQAAAArACQAAAAMAAQAAAAsACQAAAANAAQAAAAtACQAAAAHAAIA//////////8HAAMA//////////8IAAIA//////////8IAAMA//////////8JAAIA//////////8JAAMA//////////8=")
 tile_set = ExtResource("1_ycayy")
-
-[node name="Bed" type="Node2D" parent="Furniture" unique_id=1538119553]
-position = Vector2(112, 48)
-script = ExtResource("6_rurhu")
-tag_rect = Rect2i(0, 0, 2, 1)
-highlight_rect = Rect2i(0, -1, 2, 2)
-tags_enum = Array[int]([2, 6])
-id = "bed"
-custom_dialogues = Array[String](["I'm not sleepy yet.", "A cozy bed...", "So nice and fluffy."])
-metadata/_custom_type_script = "uid://ugyx3l3d66u2"
 
 [node name="Carpet" type="Node2D" parent="Furniture" unique_id=1206541273]
 position = Vector2(176, 48)
-script = ExtResource("6_rurhu")
-tag_rect = Rect2i(0, 0, 3, 3)
-highlight_rect = Rect2i(0, 0, 3, 3)
-tags_enum = Array[int]([2])
-id = "carpet"
-custom_dialogues = Array[String](["I wish this carpet could fly.", "Oh... it's a carpet.", "Just a carpet..."])
-metadata/_custom_type_script = "uid://ugyx3l3d66u2"
-
-[node name="Bookshelf" type="Node2D" parent="Furniture" unique_id=1872476051]
-position = Vector2(144, 32)
-script = ExtResource("6_rurhu")
-tag_rect = Rect2i(0, 1, 1, 1)
-highlight_rect = Rect2i(0, 0, 1, 2)
-tags_enum = Array[int]([2])
-id = "bookshelf"
-custom_dialogues = Array[String](["No time for books...", "A bookshelf.", "Some good books here."])
 metadata/_custom_type_script = "uid://ugyx3l3d66u2"
 
 [node name="Furtniture2" type="TileMapLayer" parent="." unique_id=736190419]
 tile_set = ExtResource("1_ycayy")
 
-[node name="Player" parent="." unique_id=299729164 instance=ExtResource("2_bw6k5")]
+[node name="Player" type="CharacterBody2D" parent="." unique_id=299729164 instance=ExtResource("2_bw6k5")]
 position = Vector2(168, 72)
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=350922790]
 position = Vector2(176, 80)
 limit_right = 10000083
 limit_bottom = 10000001
-script = ExtResource("3_y3j0m")
 
 [node name="Area2D" type="Area2D" parent="." unique_id=1493358853]
 position = Vector2(160, 64)
-script = ExtResource("7_kk2rg")
-camera_zoom = Vector2(1.25, 1.25)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D" unique_id=1863211313]
 position = Vector2(8, 8)
@@ -96,9 +55,13 @@ shape = SubResource("RectangleShape2D_b5spy")
 
 [node name="Area2D2" type="Area2D" parent="." unique_id=828447437]
 visible = false
-script = ExtResource("8_b5spy")
-next_scene = "uid://bxki1nnwh8a8y"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D2" unique_id=1377353471]
 position = Vector2(172, 68)
 shape = SubResource("RectangleShape2D_utbpp")
+
+[node name="Bed" type="Node2D" parent="." unique_id=451884381 instance=ExtResource("9_bed")]
+position = Vector2(120, 40)
+
+[node name="Bookshelf" type="Node2D" parent="." unique_id=301477062 instance=ExtResource("10_shelf")]
+position = Vector2(152, 40)

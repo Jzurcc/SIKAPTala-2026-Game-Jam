@@ -1,13 +1,9 @@
-[gd_scene format=4 uid="uid://ciiq4w28nn2yg"]
+[gd_scene format=4]
 
-[ext_resource type="TileSet" uid="uid://3e1s2qr6us1g" path="res://tileset.tres" id="1_p6vls"]
-[ext_resource type="Script" uid="uid://cfj0faj0iytnw" path="res://scripts/objects/tagged_tile_layer.gd" id="2_hhfj6"]
-[ext_resource type="Script" uid="uid://d84ymd2q602r" path="res://scripts/objects/tagged_tile_layer.gd" id="3_wae8j"]
-[ext_resource type="PackedScene" uid="uid://b0gkamsn4tty2" path="res://scenes/player.tscn" id="4_ha73p"]
-[ext_resource type="Script" uid="uid://ugyx3l3d66u2" path="res://scripts/objects/subtext_region.gd" id="4_hhfj6"]
-[ext_resource type="Script" uid="uid://c8qyug1wj41uf" path="res://scripts/objects/camera.gd" id="5_vcx5n"]
-[ext_resource type="PackedScene" uid="uid://f87o2q7n6p2y" path="res://scenes/goblin.tscn" id="6_56dhn"]
-[ext_resource type="Script" uid="uid://bw2muqrhk82u2" path="res://scripts/objects/level_exit.gd" id="8_wae8j"]
+[ext_resource type="TileSet" path="res://tileset.tres" id="1_p6vls"]
+[ext_resource type="PackedScene" path="res://scenes/props/bed_single.tscn" id="4_1pn4d"]
+[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="4_ha73p"]
+[ext_resource type="PackedScene" path="res://scenes/goblin.tscn" id="6_56dhn"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ha73p"]
 size = Vector2(552, 280)
@@ -21,58 +17,37 @@ tile_set = ExtResource("1_p6vls")
 [node name="Interior Walls" type="TileMapLayer" parent="." unique_id=1083101351]
 tile_map_data = PackedByteArray("AAAHAAMAAAAIAAkAAAAHAAQAAAAGAAkAAAAHAAUAAAAHAAkAABAIAAUAAAAFAAoAAAAJAAUAAAAFAAoAAAAKAAUAAAAFAAoAAAALAAUAAAAFAAoAAAAMAAUAAAAFAAoAAAANAAUAAAAFAAoAAAAOAAUAAAAFAAoAAAAIAAMAAAAEAAkAAAAJAAMAAAAEAAkAAAAKAAMAAAAEAAkAAAALAAMAAAAEAAkAAAAMAAMAAAAEAAkAAAANAAMAAAAEAAkAAAAOAAMAAAAEAAkAAAAPAAMAAAAEAAkAAAAQAAMAAAAEAAkAAAAPAAUAAAAFAAoAAAAQAAUAAAAFAAoAAAARAAMAAAAIAAkAABARAAQAAAADAA0AAAARAAUAAAAHAAoAAAAHAAYAAAAGAAkAABAHAAcAAAAGAAoAABAGAAUAAAAEAAkAAAAFAAUAAAAIAAkAAAAFAAYAAAAGAAkAAAAFAAcAAAAGAAoAAAAGAAcAAAAFAAoAAAA=")
 tile_set = ExtResource("1_p6vls")
-script = ExtResource("2_hhfj6")
-initial_tags = [0]
-initial_tags = Array[int]([0, 1])
-id = "wall"
-custom_dialogues = Array[String](["It's just a wall...", "A boring wall.", "I'm talking to a wall..."])
 
 [node name="SubtextRegion" type="Node2D" parent="Interior Walls" unique_id=1759689841]
 position = Vector2(272, 64)
-script = ExtResource("4_hhfj6")
-tags_enum = Array[int]([0])
-id = "wall"
 metadata/_custom_type_script = "uid://ugyx3l3d66u2"
 
 [node name="Interior Ground" type="TileMapLayer" parent="." unique_id=2136938388]
 tile_map_data = PackedByteArray("AAAIAAQAAAABAAkAAAAJAAQAAAABAAkAAAAKAAQAAAABAAkAAAALAAQAAAABAAkAAAAMAAQAAAABAAkAAAANAAQAAAABAAkAAAAOAAQAAAABAAkAAAAPAAQAAAABAAkAAAAQAAQAAAABAAkAAAAGAAYAAAABAAkAAAA=")
 tile_set = ExtResource("1_p6vls")
-script = ExtResource("3_wae8j")
-initial_tags = [2]
-id = "ground"
-custom_dialogues = Array[String](["It's just the ground...", "I can walk there.", "What did I expect? A floor."])
 
 [node name="Furniture" type="TileMapLayer" parent="." unique_id=946596745]
-tile_map_data = PackedByteArray("AAAGAAUAAAAnACEAAAAGAAYAAAAnACIAAAA=")
+tile_map_data = PackedByteArray("AAAGAAUA//////////8GAAYA//////////8=")
 tile_set = ExtResource("1_p6vls")
 
-[node name="SubtextRegion" type="Node2D" parent="Furniture" unique_id=1447399057]
-position = Vector2(96, 80)
-script = ExtResource("4_hhfj6")
-tag_rect = Rect2i(0, 0, 1, 2)
-highlight_rect = Rect2i(0, 0, 1, 2)
-tags_enum = Array[int]([0, 6, 5])
-id = "bed"
-metadata/_custom_type_script = "uid://ugyx3l3d66u2"
-
-[node name="Player" parent="." unique_id=299729164 instance=ExtResource("4_ha73p")]
+[node name="Player" type="CharacterBody2D" parent="." unique_id=299729164 instance=ExtResource("4_ha73p")]
 position = Vector2(152, 72)
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=728477375]
 position = Vector2(176, 80)
 limit_right = 10000083
 limit_bottom = 10000001
-script = ExtResource("5_vcx5n")
 
-[node name="Goblin" parent="." unique_id=1672792745 instance=ExtResource("6_56dhn")]
+[node name="Goblin" type="Node2D" parent="." unique_id=1672792745 instance=ExtResource("6_56dhn")]
 position = Vector2(136, 72)
 
 [node name="Area2D2" type="Area2D" parent="." unique_id=296008101]
 visible = false
 position = Vector2(24, 8)
-script = ExtResource("8_wae8j")
-next_scene = "uid://c10vq6moiw31d"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D2" unique_id=1783779242]
 position = Vector2(172, 68)
 shape = SubResource("RectangleShape2D_ha73p")
+
+[node name="Bed" type="Node2D" parent="." unique_id=1965469079 instance=ExtResource("4_1pn4d")]
+position = Vector2(104, 88)

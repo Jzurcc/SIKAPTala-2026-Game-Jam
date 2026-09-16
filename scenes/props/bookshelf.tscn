@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://df72k4e891ypa"]
+
+[ext_resource type="Script" uid="uid://tygbqivqjq3x" path="res://scripts/objects/subtext_prop.gd" id="1_shelf"]
+[ext_resource type="TileSet" uid="uid://3e1s2qr6us1g" path="res://tileset.tres" id="2_tileset"]
+
+[node name="Bookshelf" type="Node2D"]
+script = ExtResource("1_shelf")
+source_tileset = ExtResource("2_tileset")
+atlas_coords = Vector2i(42, 33)
+atlas_size = Vector2i(1, 2)
+id = "bookshelf"
+custom_dialogues = Array[String](["No time for books...", "A bookshelf.", "Some good books here."])
+tags = Array[String](["PASSABLE"])
