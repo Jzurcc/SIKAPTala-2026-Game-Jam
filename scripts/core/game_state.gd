@@ -95,12 +95,8 @@ func refresh_tilemaps() -> void:
 func _find_tilemaps_recursive(node: Node) -> void:
 	if node is TileMapLayer:
 		if not node in solid_tilemaps:
-			if "Floor" in node.name or "Ground" in node.name:
-				node.z_index = 0
-				node.y_sort_enabled = false
-			else:
-				node.z_index = 1
-				node.y_sort_enabled = true
+			node.z_index = 0
+			node.y_sort_enabled = false
 			solid_tilemaps.append(node)
 	for child: Node in node.get_children():
 		_find_tilemaps_recursive(child)
