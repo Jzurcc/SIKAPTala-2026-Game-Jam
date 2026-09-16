@@ -17,10 +17,11 @@ const TILE_SIZE: int = 16
 		queue_redraw()
 
 @export var target_layer_name: String = ""
-@export var tags_enum: Array[Grid.TagTypes] = []
+@export var tags_enum: Array[TagDef.Tag] = []
+@export var initial_subtext_tags: Array[SubtextTag] = []
 @export var id: String = ""
 @export var custom_dialogues: Array[String] = []
-var tags: Array[String] = []
+var tags: Array = []
 var _highlight_sprites: Array[Sprite2D] = []
 var _sprites_initialized: bool = false
 
@@ -35,10 +36,14 @@ func get_effective_layer_name() -> String:
 
 
 func _ready() -> void:
-	var keys: Array = Grid.TagTypes.keys()
-	for t: int in tags_enum:
-		if t >= 0 and t < keys.size():
-			tags.append(keys[t])
+	if not initial_subtext_tags.is_empty():
+		tags = initial_subtext_tags.duplicate()
+	elif not tags_enum.is_empty():
+		var keys: Array = TagDef.Tag.keys()
+		for t in tags_enum:
+			var t_idx: int = int(t)
+			if t_idx >= 0 and t_idx < keys.size():
+				tags.append(keys[t_idx])
 
 	_snap_to_grid()
 
@@ -52,11 +57,11 @@ func _ready() -> void:
 	for x in range(rect.size.x):
 		for y in range(rect.size.y):
 			var pos: Vector2i = rect.position + Vector2i(x, y)
-			for tag: String in tags:
+			for tag in tags:
 				Grid.add_layer_tag(pos, layer_to_inject, tag)
 
 
-func update_tags(new_tags: Array[String]) -> void:
+func update_tags(new_tags: Array) -> void:
 	var rect: Rect2i = get_grid_rect()
 	var layer: String = get_effective_layer_name()
 	for x in range(rect.size.x):
@@ -64,12 +69,12 @@ func update_tags(new_tags: Array[String]) -> void:
 			var pos: Vector2i = rect.position + Vector2i(x, y)
 			Grid.clear_layer_tags(pos, layer)
 
-	tags.assign(new_tags)
+	tags = new_tags.duplicate()
 
 	for x in range(rect.size.x):
 		for y in range(rect.size.y):
 			var pos: Vector2i = rect.position + Vector2i(x, y)
-			for tag: String in tags:
+			for tag in tags:
 				Grid.add_layer_tag(pos, layer, tag)
 
 	Grid.refresh_all_tags()

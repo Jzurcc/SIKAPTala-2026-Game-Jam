@@ -128,16 +128,12 @@ func is_substrate_active() -> bool:
 
 
 func is_wall_at(pos: Vector2i) -> bool:
-	for t: TileMapLayer in solid_tilemaps:
-		if is_instance_valid(t) and t.get_cell_source_id(pos) != -1:
-			return true
-	return false
+	var wt: Array = Grid.get_wall_tags(pos)
+	return "IMPASSABLE" in TagRegistry.extract_tag_names(wt)
 
 
 func is_tile_blocked(pos: Vector2i) -> bool:
-	var global_tags: Array[String] = []
-	for t in Grid.get_wall_tags(pos):
-		global_tags.append(str(t))
+	var global_tags: Array[String] = TagRegistry.extract_tag_names(Grid.get_wall_tags(pos))
 
 	if "PASSABLE" in global_tags:
 		return false
@@ -149,24 +145,22 @@ func is_tile_blocked(pos: Vector2i) -> bool:
 		var layer: TileMapLayer = solid_tilemaps[i]
 		if is_instance_valid(layer) and layer.get_cell_source_id(pos) != -1:
 			if Grid.layer_tags.has(pos) and Grid.layer_tags[pos].has(layer.name):
-				var tags_raw: Array = Grid.layer_tags[pos][layer.name]
-				var l_tags: Array[String] = []
-				for t in tags_raw:
-					l_tags.append(str(t))
+				var l_tags: Array[String] = TagRegistry.extract_tag_names(Grid.layer_tags[pos][layer.name])
 				if "PASSABLE" in l_tags:
 					continue
 				if not TagRegistry.can_enter(player_ref, pos, l_tags):
 					return true
-			return true
+			elif layer.get("tags") != null:
+				var l_tags: Array[String] = TagRegistry.extract_tag_names(layer.tags)
+				if "PASSABLE" in l_tags:
+					continue
+				if not TagRegistry.can_enter(player_ref, pos, l_tags):
+					return true
 
 	# Check occupant for inherent blocking
 	var occupant: Node2D = Grid.get_occupant(pos)
 	if occupant != null and occupant != player_ref:
-		var occ_tags_var = occupant.get("tags")
-		var occ_tags: Array[String] = []
-		if occ_tags_var != null:
-			for t in (occ_tags_var as Array):
-				occ_tags.append(str(t))
+		var occ_tags: Array[String] = TagRegistry.extract_tag_names(occupant.get("tags"))
 
 		if "PASSABLE" in occ_tags:
 			return false

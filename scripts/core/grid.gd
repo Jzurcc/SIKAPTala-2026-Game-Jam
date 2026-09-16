@@ -86,30 +86,49 @@ func set_wall_tags(pos: Vector2i, tags: Array) -> void:
 		wall_tags[pos] = tags
 
 
-func add_wall_tag(pos: Vector2i, tag: String) -> void:
+func add_wall_tag(pos: Vector2i, tag: Variant) -> void:
 	var t: Array = wall_tags.get(pos, [])
-	if not tag in t:
+	var tag_name: String = tag.name if (tag is RefCounted and tag.get("name") != null) else str(tag)
+	var found: bool = false
+	for existing in t:
+		var ex_name: String = existing.name if (existing is RefCounted and existing.get("name") != null) else str(existing)
+		if ex_name == tag_name:
+			found = true
+			break
+	if not found:
 		t.append(tag)
 	wall_tags[pos] = t
 
 
-func remove_wall_tag(pos: Vector2i, tag: String) -> void:
+func remove_wall_tag(pos: Vector2i, tag: Variant) -> void:
 	var t: Array = wall_tags.get(pos, [])
-	t.erase(tag)
+	var tag_name: String = tag.name if (tag is RefCounted and tag.get("name") != null) else str(tag)
+	for i in range(t.size() - 1, -1, -1):
+		var existing = t[i]
+		var ex_name: String = existing.name if (existing is RefCounted and existing.get("name") != null) else str(existing)
+		if ex_name == tag_name:
+			t.remove_at(i)
 	if t.is_empty():
 		wall_tags.erase(pos)
 	else:
 		wall_tags[pos] = t
 
 
-func add_layer_tag(pos: Vector2i, layer_name: String, tag: String) -> void:
+func add_layer_tag(pos: Vector2i, layer_name: String, tag: Variant) -> void:
 	if not layer_tags.has(pos):
 		layer_tags[pos] = {}
 	if not layer_tags[pos].has(layer_name):
 		layer_tags[pos][layer_name] = []
 
 	var tags_list: Array = layer_tags[pos][layer_name]
-	if not tag in tags_list:
+	var tag_name: String = tag.name if (tag is RefCounted and tag.get("name") != null) else str(tag)
+	var found: bool = false
+	for existing in tags_list:
+		var ex_name: String = existing.name if (existing is RefCounted and existing.get("name") != null) else str(existing)
+		if ex_name == tag_name:
+			found = true
+			break
+	if not found:
 		tags_list.append(tag)
 
 	add_wall_tag(pos, tag)
@@ -117,20 +136,16 @@ func add_layer_tag(pos: Vector2i, layer_name: String, tag: String) -> void:
 
 func clear_layer_tags(pos: Vector2i, layer_name: String) -> void:
 	if layer_tags.has(pos) and layer_tags[pos].has(layer_name):
-		for tag: String in layer_tags[pos][layer_name]:
+		for tag in layer_tags[pos][layer_name]:
 			remove_wall_tag(pos, tag)
 		layer_tags[pos].erase(layer_name)
 
 
-func get_cell_tags(pos: Vector2i, layer_name: String) -> Array[String]:
+func get_cell_tags(pos: Vector2i, layer_name: String) -> Array:
 	if cell_tag_overrides.has(pos) and cell_tag_overrides[pos].has(layer_name):
-		var res: Array[String] = []
-		res.assign(cell_tag_overrides[pos][layer_name])
-		return res
+		return (cell_tag_overrides[pos][layer_name] as Array).duplicate()
 	if layer_tags.has(pos) and layer_tags[pos].has(layer_name):
-		var res: Array[String] = []
-		res.assign(layer_tags[pos][layer_name])
-		return res
+		return (layer_tags[pos][layer_name] as Array).duplicate()
 	return []
 
 
@@ -150,7 +165,7 @@ func refresh_all_tags() -> void:
 		if is_instance_valid(layer) and layer.get("tags") != null:
 			var cells: Array[Vector2i] = layer.get_used_cells()
 			for pos: Vector2i in cells:
-				for tag: String in layer.tags:
+				for tag in layer.tags:
 					add_layer_tag(pos, layer.name, tag)
 
 	# PASS 2: Pre-placed level regions
@@ -162,7 +177,7 @@ func refresh_all_tags() -> void:
 					var pos: Vector2i = rect.position + Vector2i(x, y)
 					for l: TileMapLayer in GameState.solid_tilemaps:
 						clear_layer_tags(pos, l.name)
-					for tag: String in region.tags:
+					for tag in region.tags:
 						add_wall_tag(pos, tag)
 
 	# PASS 3: Cell tag overrides (pure spatial overrides from tag swaps)
@@ -170,14 +185,13 @@ func refresh_all_tags() -> void:
 		for layer_name: String in cell_tag_overrides[pos]:
 			clear_layer_tags(pos, layer_name)
 			var o_tags: Array = cell_tag_overrides[pos][layer_name]
-			for tag: String in o_tags:
+			for tag in o_tags:
 				add_layer_tag(pos, layer_name, tag)
 
 	# PASS 4: World object tags
 	for obj: Node2D in GameState.world_objects:
 		if is_instance_valid(obj) and obj.get("tags") != null:
-			var obj_tag_names: Array[String] = TagRegistry.extract_tag_names(obj.tags)
-			for tag: String in obj_tag_names:
+			for tag in obj.tags:
 				var g_size: Vector2i = obj.get("grid_size") if obj.get("grid_size") != null else Vector2i.ONE
 				for x in range(g_size.x):
 					for y in range(g_size.y):
@@ -186,7 +200,7 @@ func refresh_all_tags() -> void:
 	# PASS 5: Light conversions via TileConverter
 	var targets: Array = wall_tags.keys()
 	for pos: Vector2i in targets:
-		if "LIGHT" in wall_tags[pos]:
+		if "LIGHT" in TagRegistry.extract_tag_names(wall_tags[pos]):
 			if is_instance_valid(TileConverter):
 				TileConverter.convert_to_prop_if_unoccupied(pos, get_tree().current_scene if get_tree() else null)
 

@@ -183,8 +183,8 @@ func perform_swap(source_node: Node2D, source_pos: Vector2i, s_idx: int, target_
 	if not is_instance_valid(source_node) or not is_instance_valid(target_node):
 		return
 
-	var s_tags: Array[String] = _get_node_tags(source_node, source_pos)
-	var t_tags: Array[String] = _get_node_tags(target_node, target_pos)
+	var s_tags: Array = _get_node_tags(source_node, source_pos)
+	var t_tags: Array = _get_node_tags(target_node, target_pos)
 
 	if s_tags.is_empty() or t_tags.is_empty():
 		return
@@ -192,7 +192,7 @@ func perform_swap(source_node: Node2D, source_pos: Vector2i, s_idx: int, target_
 	if s_idx < 0 or s_idx >= s_tags.size() or t_idx < 0 or t_idx >= t_tags.size():
 		return
 
-	var tag_from_target: String = t_tags[t_idx]
+	var tag_from_target: Variant = t_tags[t_idx]
 	var target_context: Dictionary = {
 		"host": target_node,
 		"host_pos": target_pos,
@@ -200,14 +200,15 @@ func perform_swap(source_node: Node2D, source_pos: Vector2i, s_idx: int, target_
 	}
 	if not TagRegistry.can_drag_tag(tag_from_target, target_context):
 		if hover_label:
-			hover_label.shake_tag(tag_from_target)
+			var target_tag_name: String = tag_from_target.name if (tag_from_target is RefCounted and tag_from_target.get("name") != null) else str(tag_from_target)
+			hover_label.shake_tag(target_tag_name)
 		GameState.play_error_sfx()
 		swap_completed.emit()
 		return
 
 	GameState.push_undo_state()
 
-	var tag_to_move: String = s_tags[s_idx]
+	var tag_to_move: Variant = s_tags[s_idx]
 
 	s_tags[s_idx] = tag_from_target
 	t_tags[t_idx] = tag_to_move
@@ -219,19 +220,17 @@ func perform_swap(source_node: Node2D, source_pos: Vector2i, s_idx: int, target_
 	swap_completed.emit()
 
 
-func _get_node_tags(node: Node2D, pos: Vector2i) -> Array[String]:
+func _get_node_tags(node: Node2D, pos: Vector2i) -> Array:
 	if not is_instance_valid(node):
 		return []
 	if node is TileMapLayer:
 		return Grid.get_cell_tags(pos, node.name)
 	if node.get("tags") != null:
-		var res: Array[String] = []
-		res.assign(node.tags)
-		return res
+		return (node.tags as Array).duplicate()
 	return []
 
 
-func _set_node_tags(node: Node2D, pos: Vector2i, new_tags: Array[String]) -> void:
+func _set_node_tags(node: Node2D, pos: Vector2i, new_tags: Array) -> void:
 	if not is_instance_valid(node):
 		return
 	if node is TileMapLayer:
@@ -239,4 +238,4 @@ func _set_node_tags(node: Node2D, pos: Vector2i, new_tags: Array[String]) -> voi
 	elif node.has_method("update_tags"):
 		node.update_tags(new_tags)
 	elif node.get("tags") != null:
-		node.tags.assign(new_tags)
+		node.tags = new_tags.duplicate()
