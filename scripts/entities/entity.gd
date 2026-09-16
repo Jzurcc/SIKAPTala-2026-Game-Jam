@@ -1,13 +1,13 @@
+class_name Entity
 extends GridBody2D
 
-# GridBody2D provides: grid_pos, grid_size, tags, id, custom_dialogues,
-# push(), die(), update_tags(), add_tag(), remove_tag(), _tween_to()
+## Animated NPC / enemy entity.
+## Inherits from GridBody2D. Movement, collision, pushing, and AI turn behaviors
+## are delegated to TagRule strategies via TagRegistry.
 
 @export var patrol_path: Array[Vector2i] = []
-
 var patrol_index: int = 0
 var queued_turns: int = 0
-var is_alive: bool = true
 var anim: AnimatedSprite2D
 
 
@@ -20,92 +20,7 @@ func _on_ready() -> void:
 
 	GameState.register_entity(self)
 	GameState.substrate_toggled.connect(_on_substrate_toggled)
-	_play_anim("Idle")
-
-
-## Entities are not pushable by default (override can_be_pushed if needed).
-func can_be_pushed(_dir: Vector2i) -> bool:
-	return false
-
-
-func take_turn() -> void:
-	if not is_alive:
-		return
-	if "SLEEPING" in tags:
-		_play_anim("Idle")
-		return
-	if queued_turns > 0:
-		queued_turns -= 1
-		return
-
-	if "CHASING" in tags:
-		_do_chase()
-	elif "PATROLLING" in tags:
-		_do_patrol()
-	elif "FLEEING" in tags:
-		_do_flee()
-	else:
-		_play_anim("Idle")
-
-
-func _do_chase() -> void:
-	if GameState.player_ref == null:
-		return
-	if randf() > 0.5:
-		_play_anim("Idle")
-		return
-	var target_pos: Vector2i = GameState.player_ref.get("grid_pos")
-	if target_pos != Vector2i.ZERO or GameState.player_ref.grid_pos == Vector2i.ZERO:
-		_move_entity(_dir_toward(target_pos))
-
-
-func _do_patrol() -> void:
-	if patrol_path.is_empty():
-		return
-	var next: Vector2i = patrol_path[patrol_index]
-	var dir: Vector2i = _dir_toward(next)
-	if _move_entity(dir):
-		if grid_pos == next:
-			patrol_index = (patrol_index + 1) % patrol_path.size()
-
-
-func _do_flee() -> void:
-	if GameState.player_ref == null:
-		return
-	var player_pos: Vector2i = GameState.player_ref.get("grid_pos")
-	var dir: Vector2i = _dir_toward(player_pos)
-	var flee_dir: Vector2i = Vector2i(-dir.x, -dir.y)
-	if not _move_entity(flee_dir):
-		var perp_a: Vector2i = Vector2i(-flee_dir.y, flee_dir.x)
-		var perp_b: Vector2i = Vector2i(flee_dir.y, -flee_dir.x)
-		if not _move_entity(perp_a):
-			_move_entity(perp_b)
-
-
-func _move_entity(dir: Vector2i) -> bool:
-	if dir == Vector2i.ZERO:
-		return false
-
-	if dir.x < 0 and anim:
-		anim.flip_h = true
-	elif dir.x > 0 and anim:
-		anim.flip_h = false
-
-	var res: Dictionary = Grid.resolve_step(self, dir)
-	if not res.get("success", false):
-		_play_anim("Idle")
-		return false
-
-	Grid.vacate(grid_pos)
-	grid_pos = res["target_pos"]
-	Grid.occupy(grid_pos, self)
-
-	_play_anim("Walk")
-	var tw: Tween = create_tween()
-	tw.tween_property(self, "position", Grid.grid_to_world(grid_pos), MOVE_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	tw.finished.connect(func(): _play_anim("Idle"))
-
-	return true
+	play_anim("Idle")
 
 
 func attack_player() -> void:
@@ -124,30 +39,14 @@ func attack_player() -> void:
 		elif diff.x > 0 and anim:
 			anim.flip_h = false
 
-	_play_anim("Attack")
+	play_anim("Attack")
 	if GameState.player_ref and GameState.player_ref.has_method("_die"):
 		GameState.player_ref._die(attack_duration)
 
 
-func _dir_toward(target: Vector2i) -> Vector2i:
-	var diff: Vector2i = target - grid_pos
-	if abs(diff.x) >= abs(diff.y):
-		return Vector2i(sign(diff.x), 0)
-	return Vector2i(0, sign(diff.y))
-
-
 func _on_die() -> void:
-	_on_die_as_entity()
-
-
-func _on_die_as_entity() -> void:
-	if not is_alive:
-		return
-	is_alive = false
 	_scatter_tags()
 	GameState.unregister_entity(self)
-	Grid.vacate(grid_pos)
-	GameState.mark_dead(self)
 
 
 func _scatter_tags() -> void:
@@ -166,18 +65,9 @@ func _scatter_tags() -> void:
 				break
 
 
-func _play_anim(anim_name: String) -> void:
-	if anim and anim.sprite_frames and anim.sprite_frames.has_animation(anim_name):
-		anim.play(anim_name)
-
-
 func _on_substrate_toggled(active: bool) -> void:
 	if not active and queued_turns > 0:
 		var turns: int = queued_turns
 		queued_turns = 0
 		for i in range(turns):
 			take_turn()
-
-
-func _exit_tree() -> void:
-	Grid.vacate(grid_pos)

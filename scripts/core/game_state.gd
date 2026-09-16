@@ -123,6 +123,10 @@ func toggle_substrate() -> void:
 		Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
 
 
+func is_substrate_active() -> bool:
+	return is_substrate
+
+
 func is_wall_at(pos: Vector2i) -> bool:
 	for t: TileMapLayer in solid_tilemaps:
 		if is_instance_valid(t) and t.get_cell_source_id(pos) != -1:
@@ -131,10 +135,13 @@ func is_wall_at(pos: Vector2i) -> bool:
 
 
 func is_tile_blocked(pos: Vector2i) -> bool:
-	var global_tags: Array = Grid.get_wall_tags(pos)
+	var global_tags: Array[String] = []
+	for t in Grid.get_wall_tags(pos):
+		global_tags.append(str(t))
+
 	if "PASSABLE" in global_tags:
 		return false
-	if "IMPASSABLE" in global_tags:
+	if not TagRegistry.can_enter(player_ref, pos, global_tags):
 		return true
 
 	# Check tilemap layers — tag-based only
@@ -142,19 +149,31 @@ func is_tile_blocked(pos: Vector2i) -> bool:
 		var layer: TileMapLayer = solid_tilemaps[i]
 		if is_instance_valid(layer) and layer.get_cell_source_id(pos) != -1:
 			if Grid.layer_tags.has(pos) and Grid.layer_tags[pos].has(layer.name):
-				var tags: Array = Grid.layer_tags[pos][layer.name]
-				if "PASSABLE" in tags: continue
-				if "IMPASSABLE" in tags: return true
+				var tags_raw: Array = Grid.layer_tags[pos][layer.name]
+				var l_tags: Array[String] = []
+				for t in tags_raw:
+					l_tags.append(str(t))
+				if "PASSABLE" in l_tags:
+					continue
+				if not TagRegistry.can_enter(player_ref, pos, l_tags):
+					return true
 			return true
 
 	# Check occupant for inherent blocking
 	var occupant: Node2D = Grid.get_occupant(pos)
 	if occupant != null and occupant != player_ref:
-		if occupant.get("tags") != null:
-			if "PASSABLE" in occupant.tags: return false
-			if "IMPASSABLE" in occupant.tags: return true
+		var occ_tags_var = occupant.get("tags")
+		var occ_tags: Array[String] = []
+		if occ_tags_var != null:
+			for t in (occ_tags_var as Array):
+				occ_tags.append(str(t))
 
-		var has_fragile: bool = (occupant.get("tags") != null and "FRAGILE" in occupant.tags)
+		if "PASSABLE" in occ_tags:
+			return false
+		if not TagRegistry.can_enter(player_ref, pos, occ_tags):
+			return true
+
+		var has_fragile: bool = ("FRAGILE" in occ_tags)
 		if not occupant.has_method("push") and not has_fragile:
 			return true
 
@@ -215,9 +234,19 @@ func step_turn(actor: Node2D, dir: Vector2i) -> bool:
 
 
 func process_turn() -> void:
+	# Tick all registered entities and active props with autonomous tags
+	var bodies: Array[Node2D] = []
 	for e: Node2D in entities:
-		if is_instance_valid(e) and e.has_method("take_turn"):
-			e.take_turn()
+		if is_instance_valid(e) and not bodies.has(e):
+			bodies.append(e)
+	for o: Node2D in world_objects:
+		if is_instance_valid(o) and not bodies.has(o) and o != player_ref:
+			bodies.append(o)
+
+	for b: Node2D in bodies:
+		if is_instance_valid(b) and b.has_method("take_turn"):
+			b.take_turn()
+
 	turn_processed.emit()
 
 

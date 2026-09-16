@@ -167,15 +167,30 @@ flowchart LR
     Undo[UndoSnapshot] -->|snapshot / restore| O
 ```
 
+### Modular Tag Engine & Strategy Dispatch (Baba Is You Inspired)
+
+Behaviors in SUBTEXT are governed by modular `TagRule` strategies registered in `TagRegistry`. Instead of hardcoding tag checks in movement or turn loops, the engine dispatches lifecycle hooks to isolated strategy objects:
+
+```mermaid
+flowchart TD
+    Actor[Step / Turn / Push / Contact] --> TR[TagRegistry Dispatcher]
+    TR -->|can_enter?| R1[TagPassable / TagImpassable]
+    TR -->|can_push?| R2[TagLight / TagHeavy]
+    TR -->|on_pushed?| R3[TagFragile]
+    TR -->|on_enter?| R4[TagHarmful / TagPushing]
+    TR -->|on_turn_tick?| R5[TagChasing / TagPatrolling / TagFleeing / TagSleeping]
+    TR -->|on_tag_added / removed?| R6[TagHidden]
+```
+
 ---
 
 ## 5. Step-by-Step Extensibility Playbooks
 
 ---
 
-### Playbook 1: Adding a New Tag
+### Playbook 1: Adding a New Tag (The Modular TagRule Strategy)
 
-Let's say you want to add a new tag: **`BURNING`** (destroys fragile objects on contact and spreads to neighbors).
+Adding a new tag requires **zero modifications** to existing core movement or entity scripts.
 
 #### Step 1: Register the Tag in [`scripts/core/tag_def.gd`](scripts/core/tag_def.gd)
 Add the tag name to `TagDef.Tag` enum:
@@ -198,16 +213,34 @@ var tag_colors: Dictionary = {
 }
 ```
 
-#### Step 3: Implement the Behavior Hook
-Add the tag consequence in `Grid.resolve_step()` or `GameState.process_turn()`:
+#### Step 3: Create an Isolated TagRule Script in `scripts/tags/rules/tag_burning.gd`
+Inherit from `TagRule` and implement any required lifecycle hooks:
 ```gdscript
-# Example in GameState.process_turn():
-for e in entities:
-    if "BURNING" in e.tags:
-        for dir in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
-            var occ = Grid.get_occupant(e.grid_pos + dir)
-            if occ and "FRAGILE" in occ.tags:
-                occ.die()
+class_name TagBurning
+extends "res://scripts/core/tag_rule.gd"
+
+func on_enter(actor: Node2D, _target_pos: Vector2i, _occupant: Node2D) -> void:
+    if actor != null and actor.has_method("die"):
+        actor.die()
+
+func on_turn_tick(body: Node2D) -> void:
+    # Spread fire to adjacent fragile objects
+    if body is GridBody2D:
+        var grid_body := body as GridBody2D
+        for dir: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+            var occ: Node2D = Grid.get_occupant(grid_body.grid_pos + dir)
+            if occ != null and "FRAGILE" in occ.get("tags"):
+                if occ.has_method("die"):
+                    occ.die()
+```
+
+#### Step 4: Register the Rule in `TagRegistry`
+Add the registration to `scripts/core/tag_registry.gd`:
+```gdscript
+const TagBurning = preload("res://scripts/tags/rules/tag_burning.gd")
+
+# In _register_default_rules():
+register_rule("BURNING", TagBurning.new())
 ```
 
 ---
@@ -242,31 +275,37 @@ func _on_ready() -> void:
 func _on_die() -> void:
     GameState.unregister_object(self)
     Grid.refresh_all_tags()
-
-func can_be_pushed(dir: Vector2i) -> bool:
-    return "LIGHT" in tags and not is_active
 ```
-Create the `.tscn` in `scenes/props/` or `scenes/objects/`. `GridBody2D` handles grid snapping, occupancy registration, tween movement, and undo/redo support.
+Create the `.tscn` in `scenes/props/` or `scenes/objects/`. `GridBody2D` handles grid snapping, occupancy registration, tween movement, push handling, and undo/redo support.
 
 ---
 
-### Playbook 3: Adding a New AI Entity Behavior
+### Playbook 3: Adding a New Autonomous AI Behavior
 
-To create a new AI enemy behavior (e.g. `WANDERING`, `MIMIC`):
+Because all entities and objects are `GridBody2D` instances, adding autonomous behavior (e.g., `WANDERING`, `MIMIC`) is simply creating a new `TagRule` with an `on_turn_tick` implementation:
 
 1. **Add tag to `TagDef`** (e.g. `WANDERING`).
-2. **Add behavior branch in [`scripts/entities/entity.gd`](scripts/entities/entity.gd)** inside `take_turn()`:
+2. **Create `scripts/tags/rules/tag_wandering.gd`**:
 ```gdscript
-func take_turn() -> void:
-    if not is_alive: return
-    if "SLEEPING" in tags: return
+class_name TagWandering
+extends "res://scripts/core/tag_rule.gd"
+
+func on_turn_tick(body: Node2D) -> void:
+    if not (body is GridBody2D):
+        return
+    var grid_body: GridBody2D = body as GridBody2D
+    if not grid_body.is_alive or "SLEEPING" in grid_body.tags:
+        return
     
-    if "CHASING" in tags:
-        _do_chase()
-    elif "WANDERING" in tags:
-        _do_wander()
+    var dirs: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
+    var random_dir: Vector2i = dirs[randi() % dirs.size()]
+    grid_body.step(random_dir)
 ```
-3. Implement `_do_wander()` using `_move_entity(random_dir)`. `_move_entity()` automatically invokes `Grid.resolve_step()`!
+3. **Register in `TagRegistry`**:
+```gdscript
+register_rule("WANDERING", TagWandering.new())
+```
+4. Attach `tags = ["WANDERING"]` to any enemy, NPC, or even a crate/bed, and it will immediately wander during the turn pipeline with zero custom code!
 
 ---
 

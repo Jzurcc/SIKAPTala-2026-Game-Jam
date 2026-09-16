@@ -21,6 +21,7 @@ buses/default_bus_layout="uid://camvcu5bqud8p"
 
 [autoload]
 
+TagRegistry="*res://scripts/core/tag_registry.gd"
 Grid="*res://scripts/core/grid.gd"
 GameState="*res://scripts/core/game_state.gd"
 SubtextOverlay="*res://scripts/ui/subtext_overlay.gd"

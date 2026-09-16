@@ -34,3 +34,4 @@ mono_crash.*.json
 .claude/
 .agents/
 skills-lock.json
+baba-is-auto-main/

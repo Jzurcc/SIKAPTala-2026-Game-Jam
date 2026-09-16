@@ -220,41 +220,37 @@ func resolve_step(actor: Node2D, dir: Vector2i) -> Dictionary:
 	# 2. Check occupant at destination
 	var occupant: Node2D = get_occupant(target_pos)
 	if occupant != null and occupant != actor:
-		var occ_tags: Array = occupant.get("tags") if occupant.get("tags") != null else []
+		var occ_tags_var = occupant.get("tags")
+		var occ_tags: Array[String] = []
+		if occ_tags_var != null:
+			for t in (occ_tags_var as Array):
+				occ_tags.append(str(t))
 
+		# Enemy / Harmful body attacking player
 		if occupant == GameState.player_ref:
 			if "HARMFUL" in actor_tags:
 				result["attacked_player"] = true
 				if actor.has_method("attack_player"):
 					actor.attack_player()
-				else:
-					if GameState.player_ref.has_method("_die"):
-						GameState.player_ref._die()
+				elif GameState.player_ref.has_method("_die"):
+					GameState.player_ref._die()
 			result["blocked"] = true
 			return result
 
-		if "PASSABLE" in occ_tags:
+		# Check if occupant is passable via TagRegistry
+		if TagRegistry.can_enter(actor, target_pos, occ_tags):
 			pass
-		elif "FRAGILE" in occ_tags:
+		elif TagRegistry.on_pushed(actor, occupant, dir):
 			result["killed_nodes"].append(occupant)
-			if occupant.has_method("die"):
-				occupant.die()
-			elif occupant.has_method("_die"):
-				occupant._die()
 		elif "HARMFUL" in occ_tags and is_player:
 			result["harmful"] = true
 			if occupant.has_method("attack_player"):
 				occupant.attack_player()
-			else:
-				if actor.has_method("_die"):
-					actor._die()
+			elif actor.has_method("_die"):
+				actor._die()
 			return result
-		elif occupant.has_method("push"):
-			if occupant.push(dir):
-				result["pushed_nodes"].append(occupant)
-			else:
-				result["blocked"] = true
-				return result
+		elif occupant.has_method("push") and occupant.push(dir):
+			result["pushed_nodes"].append(occupant)
 		else:
 			result["blocked"] = true
 			return result
@@ -268,15 +264,11 @@ func resolve_step(actor: Node2D, dir: Vector2i) -> Dictionary:
 			actor._die()
 		return result
 
-	# 4. Check harmful floor tile at target
-	if GameState.has_harmful_at(target_pos):
-		result["harmful"] = true
-		if is_player and actor.has_method("_die"):
-			actor._die(0.3)
-		elif actor.has_method("_on_die_as_entity"):
-			actor._on_die_as_entity()
-		elif actor.has_method("die"):
-			actor.die()
+	# 4. Trigger on_enter effects for floor/occupant tags
+	var target_wall_tags: Array[String] = []
+	for t in get_wall_tags(target_pos):
+		target_wall_tags.append(str(t))
+	TagRegistry.on_enter(actor, target_pos, occupant, target_wall_tags)
 
 	result["success"] = true
 	return result
