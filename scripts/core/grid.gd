@@ -176,7 +176,8 @@ func refresh_all_tags() -> void:
 	# PASS 4: World object tags
 	for obj: Node2D in GameState.world_objects:
 		if is_instance_valid(obj) and obj.get("tags") != null:
-			for tag: String in obj.tags:
+			var obj_tag_names: Array[String] = TagRegistry.extract_tag_names(obj.tags)
+			for tag: String in obj_tag_names:
 				var g_size: Vector2i = obj.get("grid_size") if obj.get("grid_size") != null else Vector2i.ONE
 				for x in range(g_size.x):
 					for y in range(g_size.y):

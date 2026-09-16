@@ -7,7 +7,7 @@ extends Node2D
 
 @export var id: String = ""
 @export var custom_dialogues: Array[String] = []
-@export var tags: Array[String] = []
+@export var tags: Array = []
 
 var grid_pos: Vector2i = Vector2i.ZERO
 var grid_size: Vector2i = Vector2i.ONE
@@ -174,31 +174,69 @@ func _on_die() -> void:
 	pass
 
 
-func update_tags(new_tags: Array[String]) -> void:
-	var old_tags: Array[String] = tags.duplicate()
-	tags.assign(new_tags)
-	for t: String in old_tags:
-		if not t in tags:
+func get_tag_names() -> Array[String]:
+	var res: Array[String] = []
+	for t in tags:
+		if t is RefCounted and t.get("name") != null:
+			res.append(str(t.name))
+		else:
+			res.append(str(t))
+	return res
+
+
+func has_tag(tag_name: String) -> bool:
+	for t in tags:
+		if t is RefCounted and t.get("name") != null:
+			if str(t.name) == tag_name:
+				return true
+		elif str(t) == tag_name:
+			return true
+	return false
+
+
+func update_tags(new_tags: Array) -> void:
+	var old_tag_names: Array[String] = get_tag_names()
+	tags = new_tags.duplicate()
+	var new_tag_names: Array[String] = get_tag_names()
+	for t: String in old_tag_names:
+		if not t in new_tag_names:
 			TagRegistry.notify_tag_removed(self, t)
-	for t: String in tags:
-		if not t in old_tags:
+	for t: String in new_tag_names:
+		if not t in old_tag_names:
 			TagRegistry.notify_tag_added(self, t)
 	Grid.refresh_all_tags()
 
 
-func add_tag(tag: String) -> bool:
-	if tag in tags:
+func add_tag(tag: Variant) -> bool:
+	var tag_name: String = tag.name if (tag is RefCounted and tag.get("name") != null) else str(tag)
+	if has_tag(tag_name):
 		return false
 	tags.append(tag)
-	TagRegistry.notify_tag_added(self, tag)
+	TagRegistry.notify_tag_added(self, tag_name)
 	Grid.refresh_all_tags()
 	return true
 
 
-func remove_tag(tag: String) -> bool:
-	if not tag in tags:
+func remove_tag(tag_name: String) -> bool:
+	var found_idx: int = -1
+	for i in range(tags.size()):
+		var t = tags[i]
+		var t_name: String = t.name if (t is RefCounted and t.get("name") != null) else str(t)
+		if t_name == tag_name:
+			found_idx = i
+			break
+	if found_idx == -1:
 		return false
-	tags.erase(tag)
-	TagRegistry.notify_tag_removed(self, tag)
+	tags.remove_at(found_idx)
+	TagRegistry.notify_tag_removed(self, tag_name)
 	Grid.refresh_all_tags()
 	return true
+
+
+func add_subtext_tag(tag: Variant) -> bool:
+	return add_tag(tag)
+
+
+func remove_subtext_tag(tag: Variant) -> bool:
+	var tag_name: String = tag.name if (tag is RefCounted and tag.get("name") != null) else str(tag)
+	return remove_tag(tag_name)

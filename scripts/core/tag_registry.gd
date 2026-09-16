@@ -17,7 +17,18 @@ const TagFleeing = preload("res://scripts/tags/rules/tag_fleeing.gd")
 const TagSleeping = preload("res://scripts/tags/rules/tag_sleeping.gd")
 const TagHidden = preload("res://scripts/tags/rules/tag_hidden.gd")
 
+# Property Rules
+const PropLocked = preload("res://scripts/tags/properties/prop_locked.gd")
+const PropHidden = preload("res://scripts/tags/properties/prop_hidden.gd")
+const PropAnchored = preload("res://scripts/tags/properties/prop_anchored.gd")
+const PropDormant = preload("res://scripts/tags/properties/prop_dormant.gd")
+const PropSpreading = preload("res://scripts/tags/properties/prop_spreading.gd")
+const PropBrittle = preload("res://scripts/tags/properties/prop_brittle.gd")
+const PropVolatile = preload("res://scripts/tags/properties/prop_volatile.gd")
+const PropExpiring = preload("res://scripts/tags/properties/prop_expiring.gd")
+
 static var _rules: Dictionary = {}
+static var _property_rules: Dictionary = {}
 static var _initialized: bool = false
 
 
@@ -30,6 +41,7 @@ static func _ensure_initialized() -> void:
 		return
 	_initialized = true
 	_register_default_rules()
+	_register_default_property_rules()
 
 
 static func _register_default_rules() -> void:
@@ -47,6 +59,17 @@ static func _register_default_rules() -> void:
 	register_rule("HIDDEN", TagHidden.new())
 
 
+static func _register_default_property_rules() -> void:
+	register_property_rule("LOCKED", PropLocked.new())
+	register_property_rule("HIDDEN", PropHidden.new())
+	register_property_rule("ANCHORED", PropAnchored.new())
+	register_property_rule("DORMANT", PropDormant.new())
+	register_property_rule("SPREADING", PropSpreading.new())
+	register_property_rule("BRITTLE", PropBrittle.new())
+	register_property_rule("VOLATILE", PropVolatile.new())
+	register_property_rule("EXPIRING", PropExpiring.new())
+
+
 static func register_rule(tag_name: String, rule: RefCounted) -> void:
 	_rules[tag_name] = rule
 
@@ -54,6 +77,15 @@ static func register_rule(tag_name: String, rule: RefCounted) -> void:
 static func get_rule(tag_name: String) -> RefCounted:
 	_ensure_initialized()
 	return _rules.get(tag_name, null)
+
+
+static func register_property_rule(prop_name: String, rule: RefCounted) -> void:
+	_property_rules[prop_name] = rule
+
+
+static func get_property_rule(prop_name: String) -> RefCounted:
+	_ensure_initialized()
+	return _property_rules.get(prop_name, null)
 
 
 ## --- Rule Dispatch Methods ---
@@ -81,19 +113,31 @@ static func on_enter(actor: Node2D, target_pos: Vector2i, occupant: Node2D, tags
 			rule.on_enter(actor, target_pos, occupant)
 
 
+static func extract_tag_names(tags_variant: Variant) -> Array[String]:
+	var res: Array[String] = []
+	if tags_variant == null:
+		return res
+	var tags: Array = tags_variant as Array
+	for t in tags:
+		if t is RefCounted and t.get("name") != null:
+			res.append(str(t.name))
+		else:
+			res.append(str(t))
+	return res
+
+
 ## Checks whether an object can be pushed
 static func can_push(pusher: Node2D, target: Node2D, dir: Vector2i) -> bool:
 	_ensure_initialized()
 	var tags_variant = target.get("tags")
 	if tags_variant == null:
 		return false
-	var tags: Array = tags_variant as Array
+	var tags: Array[String] = extract_tag_names(tags_variant)
 	if "HEAVY" in tags:
 		return false
 	if "LIGHT" in tags:
 		return true
-	for tag_item in tags:
-		var tag: String = str(tag_item)
+	for tag: String in tags:
 		var rule: TagRule = _rules.get(tag, null)
 		if rule != null and rule.can_push(pusher, target, dir):
 			return true
@@ -107,9 +151,8 @@ static func on_pushed(pusher: Node2D, target: Node2D, dir: Vector2i) -> bool:
 	var tags_variant = target.get("tags")
 	if tags_variant == null:
 		return false
-	var tags: Array = tags_variant as Array
-	for tag_item in tags:
-		var tag: String = str(tag_item)
+	var tags: Array[String] = extract_tag_names(tags_variant)
+	for tag: String in tags:
 		var rule: TagRule = _rules.get(tag, null)
 		if rule != null and rule.on_pushed(pusher, target, dir):
 			return true
@@ -124,7 +167,7 @@ static func tick_body(body: Node2D) -> void:
 	var tags_variant = body.get("tags")
 	if tags_variant == null:
 		return
-	var tags: Array = tags_variant as Array
+	var tags: Array[String] = extract_tag_names(tags_variant)
 	# SLEEPING suppresses all movement tags
 	if "SLEEPING" in tags:
 		var sleeping_rule: TagRule = _rules.get("SLEEPING", null)
@@ -147,8 +190,7 @@ static func tick_body(body: Node2D) -> void:
 			rule.on_turn_tick(body)
 	else:
 		# Tick any other custom tags
-		for tag_item in tags:
-			var tag: String = str(tag_item)
+		for tag: String in tags:
 			if not tag in ["CHASING", "PATROLLING", "FLEEING"]:
 				var rule: TagRule = _rules.get(tag, null)
 				if rule != null:
@@ -168,3 +210,57 @@ static func notify_tag_removed(target: Object, tag: String) -> void:
 	var rule: TagRule = _rules.get(tag, null)
 	if rule != null:
 		rule.on_tag_removed(target)
+
+
+## --- Tag Property Interceptor Methods ---
+
+## Checks whether a tag can be dragged by evaluating its attached properties.
+static func can_drag_tag(tag: Variant, context: Dictionary = {}) -> bool:
+	_ensure_initialized()
+	if tag == null:
+		return false
+	var props: Array = []
+	if tag is RefCounted and tag.get("properties") != null:
+		props = tag.get("properties") as Array
+	for p_item in props:
+		var p: String = str(p_item)
+		var rule: RefCounted = _property_rules.get(p, null)
+		if rule != null and not rule.can_drag(tag, context):
+			return false
+	return true
+
+
+## Checks whether a tag can be rendered in Subtext view by evaluating its attached properties.
+static func can_render_tag(tag: Variant, context: Dictionary = {}) -> bool:
+	_ensure_initialized()
+	if tag == null:
+		return false
+	var props: Array = []
+	if tag is RefCounted and tag.get("properties") != null:
+		props = tag.get("properties") as Array
+	for p_item in props:
+		var p: String = str(p_item)
+		var rule: RefCounted = _property_rules.get(p, null)
+		if rule != null and not rule.can_render(tag, context):
+			return false
+	return true
+
+
+## Dispatches host physical contact to the property rules of all attached tags
+static func on_host_contact(host: Node2D, other: Node2D) -> void:
+	_ensure_initialized()
+	if host == null:
+		return
+	var tags_variant = host.get("tags")
+	if tags_variant == null:
+		return
+	var tags: Array = tags_variant as Array
+	for tag in tags:
+		if tag is RefCounted and tag.get("properties") != null:
+			var props: Array = tag.get("properties") as Array
+			for p_item in props:
+				var p: String = str(p_item)
+				var rule: RefCounted = _property_rules.get(p, null)
+				if rule != null:
+					rule.on_host_contact(tag, host, other)
+

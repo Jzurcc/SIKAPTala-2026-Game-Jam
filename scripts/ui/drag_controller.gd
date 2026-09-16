@@ -21,11 +21,12 @@ var _last_preview_idx: int = -1
 var _last_preview_label: TagLabel = null
 
 
-func begin_drag(tag: String, index: int, source_node: Node2D, source_pos: Vector2i, container: CanvasLayer, hover_label: TagLabel) -> void:
+func begin_drag(tag: Variant, index: int, source_node: Node2D, source_pos: Vector2i, container: CanvasLayer, hover_label: TagLabel) -> void:
 	is_dragging = true
 	GameState.play_select_sfx()
 	drag_source_pos = source_pos
-	drag_tag = tag
+	var tag_name: String = tag.name if (tag is RefCounted and tag.get("name") != null) else str(tag)
+	drag_tag = tag_name
 	drag_index = index
 	drag_source_node = source_node
 
@@ -44,8 +45,8 @@ func begin_drag(tag: String, index: int, source_node: Node2D, source_pos: Vector
 	drag_visual.add_theme_constant_override("outline_size", 2)
 	drag_visual.add_theme_color_override("outline_color", Color.BLACK)
 
-	var color: String = hover_label.tag_colors.get(tag, "#ffffff") if hover_label else "#ffffff"
-	drag_visual.text = "[center][color=" + color + "][" + tag + "][/color][/center]"
+	var color: String = hover_label.tag_colors.get(tag_name, "#ffffff") if hover_label else "#ffffff"
+	drag_visual.text = "[center][color=" + color + "][" + tag_name + "][/color][/center]"
 
 	container.add_child(drag_visual)
 	if hover_label:
@@ -65,7 +66,7 @@ func begin_drag(tag: String, index: int, source_node: Node2D, source_pos: Vector
 	else:
 		last_mouse_pos = Vector2.ZERO
 
-	drag_started.emit(tag, index)
+	drag_started.emit(tag_name, index)
 
 
 func cancel(hover_label: TagLabel = null) -> void:
@@ -188,20 +189,25 @@ func perform_swap(source_node: Node2D, source_pos: Vector2i, s_idx: int, target_
 	if s_tags.is_empty() or t_tags.is_empty():
 		return
 
-	if "LOCKED" in t_tags:
-		if hover_label:
-			hover_label.shake_tag("LOCKED")
-		GameState.play_error_sfx()
-		swap_completed.emit()
+	if s_idx < 0 or s_idx >= s_tags.size() or t_idx < 0 or t_idx >= t_tags.size():
 		return
 
-	if s_idx < 0 or s_idx >= s_tags.size() or t_idx < 0 or t_idx >= t_tags.size():
+	var tag_from_target: String = t_tags[t_idx]
+	var target_context: Dictionary = {
+		"host": target_node,
+		"host_pos": target_pos,
+		"player_pos": GameState.player_ref.grid_pos if GameState.player_ref else Vector2i.ZERO
+	}
+	if not TagRegistry.can_drag_tag(tag_from_target, target_context):
+		if hover_label:
+			hover_label.shake_tag(tag_from_target)
+		GameState.play_error_sfx()
+		swap_completed.emit()
 		return
 
 	GameState.push_undo_state()
 
 	var tag_to_move: String = s_tags[s_idx]
-	var tag_from_target: String = t_tags[t_idx]
 
 	s_tags[s_idx] = tag_from_target
 	t_tags[t_idx] = tag_to_move

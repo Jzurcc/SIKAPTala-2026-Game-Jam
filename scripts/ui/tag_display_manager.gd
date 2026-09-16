@@ -73,18 +73,27 @@ func _input(event: InputEvent) -> void:
 				return
 
 
-func _on_tag_drag_started(tag: String, index: int) -> void:
-	if "LOCKED" in current_tags:
-		if hover_label:
-			hover_label.shake_tag("LOCKED")
-		GameState.play_error_sfx()
-		return
+func _on_tag_drag_started(tag: Variant, index: int) -> void:
 	if last_highlighted == null:
 		return
 
 	var current_sc: Node = get_tree().current_scene
 	var m_pos: Vector2 = (current_sc as Node2D).get_global_mouse_position() if current_sc is Node2D else Vector2.ZERO
 	var source_pos: Vector2i = Grid.world_to_grid(m_pos)
+	var player_pos: Vector2i = GameState.player_ref.grid_pos if GameState.player_ref else Vector2i.ZERO
+
+	var context: Dictionary = {
+		"host": last_highlighted,
+		"host_pos": source_pos,
+		"player_pos": player_pos
+	}
+
+	if not TagRegistry.can_drag_tag(tag, context):
+		if hover_label:
+			var tag_name: String = tag.name if (tag is RefCounted and tag.get("name") != null) else str(tag)
+			hover_label.shake_tag(tag_name)
+		GameState.play_error_sfx()
+		return
 
 	drag.begin_drag(tag, index, last_highlighted, source_pos, label_container, hover_label)
 

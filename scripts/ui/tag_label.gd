@@ -1,10 +1,11 @@
 extends Node2D
 class_name TagLabel
 
-signal tag_drag_started(tag: String, index: int)
+signal tag_drag_started(tag: Variant, index: int)
 
 var container: Control
 var font_path = "res://assets/sprites/World/Fonts/Kenney Mini.ttf"
+var badge_texture_path = "res://assets/sprites/tag_property_badge.svg"
 
 var tag_colors = {
 	"IMPASSABLE": "#888888",
@@ -48,6 +49,18 @@ func _add_float_animation() -> void:
 	tween.tween_property(container, "position:y", base_y + amt, dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tween.tween_property(container, "position:y", base_y - amt, dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
+static var _cached_badge_tex: Texture2D = null
+
+static func get_badge_texture() -> Texture2D:
+	if _cached_badge_tex == null:
+		if ResourceLoader.exists("res://icon.svg"):
+			_cached_badge_tex = load("res://icon.svg")
+		else:
+			var img: Image = Image.create(6, 6, false, Image.FORMAT_RGBA8)
+			img.fill(Color(1.0, 0.84, 0.0, 1.0))
+			_cached_badge_tex = ImageTexture.create_from_image(img)
+	return _cached_badge_tex
+
 var current_tags: Array = []
 
 func setup(tags: Array) -> void:
@@ -62,27 +75,53 @@ func setup(tags: Array) -> void:
 	_target_positions.clear()
 	_base_widths.clear()
 
+	var badge_tex: Texture2D = get_badge_texture()
+
 	for tag in tags:
-		var label = RichTextLabel.new()
+		# Check visibility in Subtext view via TagRegistry
+		if not TagRegistry.can_render_tag(tag):
+			continue
+
+		var tag_name: String = tag.name if (tag is RefCounted and tag.get("name") != null) else str(tag)
+		var properties: Array = tag.properties if (tag is RefCounted and tag.get("properties") != null) else []
+
+		var tag_box := HBoxContainer.new()
+		tag_box.mouse_filter = Control.MOUSE_FILTER_STOP
+		tag_box.add_theme_constant_override("separation", 2)
+
+		var label := RichTextLabel.new()
 		label.bbcode_enabled = true
 		label.fit_content = true
 		label.autowrap_mode = TextServer.AUTOWRAP_OFF
 		label.clip_contents = false
-		label.mouse_filter = Control.MOUSE_FILTER_STOP
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		
-		var font = load(font_path)
+		var font: Font = load(font_path)
 		if font: label.add_theme_font_override("normal_font", font)
 		label.add_theme_font_size_override("normal_font_size", 5)
 		label.add_theme_constant_override("outline_size", 2)
 		label.add_theme_color_override("outline_color", Color.BLACK)
 
-		var color = tag_colors.get(tag, "#ffffff")
-		label.text = "[color=" + color + "][" + tag + "][/color]"
+		var color: String = tag_colors.get(tag_name, "#ffffff")
+		label.text = "[color=" + color + "][" + tag_name + "][/color]"
+		tag_box.add_child(label)
 
-		container.add_child(label)
-		label.set_meta("tag", tag)
+		# Add square property badge icons to the right of the tag text
+		for prop in properties:
+			var badge := TextureRect.new()
+			badge.texture = badge_tex
+			badge.custom_minimum_size = Vector2(6, 6)
+			badge.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			badge.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			badge.set_meta("property", str(prop))
+			tag_box.add_child(badge)
+
+		container.add_child(tag_box)
+		tag_box.set_meta("tag", tag_name)
+		tag_box.set_meta("tag_data", tag)
 		
-		_labels.append(label)
+		_labels.append(tag_box)
 		_hover_scales.append(1.0)
 		_target_positions.append(0.0)
 		_base_widths.append(0.0)
@@ -90,11 +129,11 @@ func setup(tags: Array) -> void:
 	await get_tree().process_frame
 	
 	for i in range(_labels.size()):
-		var label = _labels[i]
-		if is_instance_valid(label):
-			_base_widths[i] = label.size.x
-			label.pivot_offset = label.size / 2.0
-			label.gui_input.connect(_on_tag_gui_input.bind(label))
+		var tag_box = _labels[i]
+		if is_instance_valid(tag_box):
+			_base_widths[i] = tag_box.size.x
+			tag_box.pivot_offset = tag_box.size / 2.0
+			tag_box.gui_input.connect(_on_tag_gui_input.bind(tag_box))
 
 func _process(_delta: float) -> void:
 	if _labels.is_empty(): return
@@ -154,15 +193,9 @@ func _process(_delta: float) -> void:
 
 func _on_tag_gui_input(event: InputEvent, node: Control) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		if "LOCKED" in current_tags:
-			for label in _labels:
-				if label.get_meta("tag", "") == "LOCKED":
-					_shake_node(label)
-					break
-		
-		var index = node.get_index()
-		var tag = node.get_meta("tag", "")
-		tag_drag_started.emit(tag, index)
+		var index: int = node.get_index()
+		var tag_data = node.get_meta("tag_data", node.get_meta("tag", ""))
+		tag_drag_started.emit(tag_data, index)
 
 func _shake_node(node: Control) -> void:
 	var tween = create_tween()
