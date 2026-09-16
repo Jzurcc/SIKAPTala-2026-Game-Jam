@@ -54,7 +54,9 @@ func _do_chase() -> void:
 	if randf() > 0.5:
 		_play_anim("Idle")
 		return
-	_move_entity(_dir_toward(GameState.player_ref.grid_pos))
+	var target_pos: Vector2i = GameState.player_ref.get("grid_pos")
+	if target_pos:
+		_move_entity(_dir_toward(target_pos))
 
 
 func _do_patrol() -> void:
@@ -70,7 +72,10 @@ func _do_patrol() -> void:
 func _do_flee() -> void:
 	if GameState.player_ref == null:
 		return
-	var dir := _dir_toward(GameState.player_ref.grid_pos)
+	var player_pos: Vector2i = GameState.player_ref.get("grid_pos")
+	if not player_pos:
+		return
+	var dir := _dir_toward(player_pos)
 	var flee_dir := Vector2i(-dir.x, -dir.y)
 	if not _move_entity(flee_dir):
 		var perp_a := Vector2i(-flee_dir.y, flee_dir.x)
@@ -148,12 +153,12 @@ func attack_player() -> void:
 			attack_duration = frames / float(fps)
 
 	if GameState.player_ref:
-		var diff := GameState.player_ref.grid_pos - grid_pos
+		var diff: Vector2i = GameState.player_ref.get("grid_pos") - grid_pos
 		if diff.x < 0 and anim: anim.flip_h = true
 		elif diff.x > 0 and anim: anim.flip_h = false
 
 	_play_anim("Attack")
-	if GameState.player_ref:
+	if GameState.player_ref and GameState.player_ref.has_method("_die"):
 		GameState.player_ref._die(attack_duration)
 
 
