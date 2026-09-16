@@ -1,11 +1,11 @@
 extends Node
-class_name TileConverter
 
 ## Converts a tilemap cell into a runtime GridBody2D (WorldObject) node.
 ## Extracted from Grid._legacy_try_convert_to_node(). This is the single
 ## canonical place for tile-atlas-to-sprite conversion logic.
 ##
-## Phase 7: This class will also track dirty cells for undo restoration.
+## Registered as autoload "TileConverter" in project.godot.
+## Phase 7: Also tracks dirty cells for undo restoration.
 
 var _world_object_script = preload("res://scripts/world_object.gd")
 

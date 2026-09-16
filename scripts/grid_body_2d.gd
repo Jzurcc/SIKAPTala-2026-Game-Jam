@@ -1,5 +1,5 @@
-extends Node2D
 class_name GridBody2D
+extends Node2D
 
 ## Base class for all grid-positioned objects: pushable props, world objects, and AI entities.
 ## Handles: grid snapping, multi-cell occupancy, push logic, tween movement, and death.
@@ -70,7 +70,8 @@ func push(dir: Vector2i) -> bool:
 				return false
 			var occ: Node2D = Grid.get_occupant(check)
 			if occ != null and occ != self:
-				if "FRAGILE" in occ.get("tags", []):
+				var occ_tags = occ.get("tags")
+				if occ_tags != null and "FRAGILE" in occ_tags:
 					if occ.has_method("die"):
 						occ.die()
 					elif occ.has_method("_die"):

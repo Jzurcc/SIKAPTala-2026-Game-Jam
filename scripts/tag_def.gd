@@ -24,20 +24,20 @@ enum Tag {
 }
 
 ## Returns the string name of a Tag enum value (e.g. Tag.LIGHT -> "LIGHT").
-static func to_string(t: Tag) -> String:
+static func tag_to_string(t: Tag) -> String:
 	return Tag.keys()[t]
 
 ## Parses a string into a Tag enum value. Asserts on unknown tag names.
-static func from_string(s: String) -> Tag:
+static func tag_from_string(s: String) -> Tag:
 	var idx: int = Tag.keys().find(s)
-	assert(idx != -1, "TagDef.from_string: unknown tag '" + s + "'")
+	assert(idx != -1, "TagDef.tag_from_string: unknown tag '" + s + "'")
 	return idx as Tag
 
 ## Converts an Array[Tag] into an Array[String].
 static func to_string_array(tags: Array) -> Array[String]:
 	var result: Array[String] = []
 	for t in tags:
-		result.append(to_string(t))
+		result.append(tag_to_string(t))
 	return result
 
 ## Returns true if the string is a registered tag name.

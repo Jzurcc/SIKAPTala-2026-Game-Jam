@@ -129,11 +129,11 @@ func refresh_all_tags() -> void:
 						add_wall_tag(obj.grid_pos + Vector2i(x, y), tag)
 				
 	# PASS 2: Handle conversions for any newly detected LIGHT tags.
-	# TileConverter (Phase 4) owns this logic. Guard keeps game working during migration.
+	# TileConverter (autoload) owns this logic. Falls back to legacy method if not yet ready.
 	var targets = wall_tags.keys()
 	for pos in targets:
 		if "LIGHT" in wall_tags[pos]:
-			if Engine.has_singleton("TileConverter") or ClassDB.class_exists("TileConverter"):
+			if is_instance_valid(TileConverter):
 				TileConverter.convert_to_prop_if_unoccupied(pos, get_tree().current_scene if get_tree() else null)
 			else:
 				_legacy_try_convert_to_node(pos)
