@@ -12,7 +12,7 @@ var last_highlighted: Node2D = null
 var last_highlighted_pos: Vector2i = Vector2i.ZERO
 var tile_highlight_sprite: Sprite2D
 var highlight_container: Node2D
-var label_container: CanvasLayer
+var label_container: Node2D
 
 var is_selected: bool = false
 var _target_world_pos: Vector2 = Vector2.ZERO
@@ -32,11 +32,11 @@ func _ready() -> void:
 	drag.swap_completed.connect(_on_swap_completed)
 
 	highlight_container = Node2D.new()
+	highlight_container.z_index = 105
 	add_child(highlight_container)
 
-	label_container = CanvasLayer.new()
-	label_container.layer = 101
-	label_container.follow_viewport_enabled = true
+	label_container = Node2D.new()
+	label_container.z_index = 110
 	add_child(label_container)
 
 	tile_highlight_sprite = Sprite2D.new()
@@ -206,20 +206,11 @@ func _process(delta: float) -> void:
 		return
 
 	var mouse_pos: Vector2 = (scene as Node2D).get_global_mouse_position()
-	var grid_pos: Vector2i = Grid.world_to_grid(mouse_pos)
 
-	var is_locked: bool = false
+	# If currently dragging, keep the active target locked
+	var over_label: bool = is_selected and not current_tags.is_empty() and hover_label.is_mouse_over_label_area(mouse_pos)
 
-	# Check lock-on area: keep target active while mouse is over target, label, or intermediate area
-	if is_selected and is_instance_valid(last_highlighted):
-		var target_bounds: Rect2 = SpriteHitDetector.get_visual_bounding_rect(last_highlighted, last_highlighted_pos)
-		var label_bounds: Rect2 = hover_label.get_total_label_rect()
-		var combined_zone: Rect2 = target_bounds.merge(label_bounds).grow(4.0)
-
-		if combined_zone.has_point(mouse_pos):
-			is_locked = true
-
-	if not is_locked:
+	if not drag.is_dragging and not over_label:
 		var new_candidates: Array[Dictionary] = SpriteHitDetector.get_candidates_at_position(mouse_pos)
 
 		if new_candidates.is_empty():
@@ -229,17 +220,20 @@ func _process(delta: float) -> void:
 			tile_highlight_sprite.visible = false
 			_candidates.clear()
 			_selected_candidate_idx = 0
+			current_tags = []
 		else:
-			var candidate_changed: bool = (new_candidates.size() != _candidates.size() or grid_pos != _last_grid_pos)
-			if not candidate_changed and not _candidates.is_empty():
-				# Check if the node at index 0 changed
-				if new_candidates[0]["node"] != _candidates[0]["node"]:
-					candidate_changed = true
+			var changed: bool = false
+			if new_candidates.size() != _candidates.size():
+				changed = true
+			else:
+				for i in range(new_candidates.size()):
+					if new_candidates[i]["node"] != _candidates[i]["node"] or new_candidates[i]["pos"] != _candidates[i]["pos"]:
+						changed = true
+						break
 
 			_candidates = new_candidates
-			_last_grid_pos = grid_pos
 
-			if candidate_changed:
+			if changed or not is_selected:
 				_selected_candidate_idx = 0
 				_apply_current_candidate()
 
@@ -249,10 +243,10 @@ func _process(delta: float) -> void:
 		if drag.is_dragging and last_highlighted == drag.drag_source_node and last_highlighted_pos == drag.drag_source_pos:
 			hover_label.remove_tag_visual(drag.drag_index)
 
-		hover_label.global_position = hover_label.global_position.lerp(_target_world_pos, 0.15)
-		hover_label.modulate.a = lerpf(hover_label.modulate.a, 1.0, 0.2)
+		hover_label.global_position = hover_label.global_position.lerp(_target_world_pos, 0.25)
+		hover_label.modulate.a = lerpf(hover_label.modulate.a, 1.0, 0.25)
 	else:
-		hover_label.modulate.a = lerpf(hover_label.modulate.a, 0.0, 0.3)
+		hover_label.modulate.a = lerpf(hover_label.modulate.a, 0.0, 0.35)
 		if hover_label.modulate.a < 0.05:
 			current_tags = []
 

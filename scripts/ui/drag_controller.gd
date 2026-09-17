@@ -21,7 +21,7 @@ var _last_preview_idx: int = -1
 var _last_preview_label: TagLabel = null
 
 
-func begin_drag(tag: Variant, index: int, source_node: Node2D, source_pos: Vector2i, container: CanvasLayer, hover_label: TagLabel) -> void:
+func begin_drag(tag: Variant, index: int, source_node: Node2D, source_pos: Vector2i, container: Node, hover_label: TagLabel) -> void:
 	is_dragging = true
 	GameState.play_select_sfx()
 	drag_source_pos = source_pos

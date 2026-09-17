@@ -247,30 +247,49 @@ func set_selected(selected: bool) -> void:
 		tween.tween_property(container, "scale", Vector2(1.0, 1.0), 0.2)
 
 func get_tag_global_position(index: int) -> Vector2:
-	if index < 0 or index >= _labels.size(): return global_position
-	return _labels[index].global_position
+	if index < 0 or index >= _labels.size():
+		return global_position
+	var label: Control = _labels[index]
+	var w: float = _base_widths[index] if index < _base_widths.size() and _base_widths[index] > 0.0 else label.size.x
+	var h: float = label.size.y if label.size.y > 0.0 else 10.0
+	return global_position + label.position + Vector2(w * 0.5, h * 0.5)
 
 func get_hovered_tag_index(mouse_pos: Vector2, use_shrink: bool = false) -> int:
+	var local_m: Vector2 = mouse_pos - global_position
 	for i in range(_labels.size()):
-		var rect = _labels[i].get_global_rect()
+		var label: Control = _labels[i]
+		var w: float = _base_widths[i] if i < _base_widths.size() and _base_widths[i] > 0.0 else label.size.x
+		var h: float = label.size.y if label.size.y > 0.0 else 12.0
+		var rect := Rect2(label.position, Vector2(w, h))
 		if use_shrink:
-			var shrink = rect.size.x * 0.25 # 25% each side = 50% center
+			var shrink: float = rect.size.x * 0.25
 			rect.position.x += shrink
-			rect.size.x -= shrink * 2
-		if rect.has_point(mouse_pos):
+			rect.size.x -= shrink * 2.0
+		if rect.has_point(local_m):
 			return i
 	return -1
 
 func get_total_label_rect() -> Rect2:
 	if _labels.is_empty():
-		return Rect2(global_position - Vector2(16, 8), Vector2(32, 16))
-	var total_rect: Rect2 = _labels[0].get_global_rect()
-	for i in range(1, _labels.size()):
-		total_rect = total_rect.merge(_labels[i].get_global_rect())
-	return total_rect.grow(4.0)
+		return Rect2(global_position - Vector2(16, 12), Vector2(32, 16))
+	var min_x: float = 999999.0
+	var max_x: float = -999999.0
+	for i in range(_labels.size()):
+		var label: Control = _labels[i]
+		var w: float = _base_widths[i] if i < _base_widths.size() and _base_widths[i] > 0.0 else label.size.x
+		min_x = minf(min_x, label.position.x)
+		max_x = maxf(max_x, label.position.x + w)
+	if is_instance_valid(layer_indicator) and layer_indicator.visible:
+		min_x = minf(min_x, layer_indicator.position.x)
+		max_x = maxf(max_x, layer_indicator.position.x + layer_indicator.size.x)
+	var r_pos: Vector2 = global_position + Vector2(min_x, -14.0)
+	var r_size: Vector2 = Vector2(max_x - min_x, 20.0)
+	return Rect2(r_pos, r_size).grow(2.0)
 
 
 func is_mouse_over_label_area(mouse_pos: Vector2) -> bool:
+	if modulate.a < 0.2 or _labels.is_empty():
+		return false
 	return get_total_label_rect().has_point(mouse_pos)
 
 func set_replacement_pulse(index: int) -> void:
