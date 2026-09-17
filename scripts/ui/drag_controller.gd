@@ -140,44 +140,28 @@ func handle_drop(mouse_pos: Vector2, hover_label: TagLabel, last_highlighted: No
 		return
 
 	var grid_pos: Vector2i = Grid.world_to_grid(mouse_pos)
-	var target_layer: TileMapLayer = null
-	if display_manager and display_manager.has_method("get_hovered_tile_layer"):
-		target_layer = display_manager.get_hovered_tile_layer(mouse_pos, true)
-		if target_layer == null:
-			target_layer = display_manager.get_hovered_tile_layer(mouse_pos, false)
-
 	var target_node: Node2D = null
+	var target_pos: Vector2i = grid_pos
 
-	# 1. Direct tag label click
-	if hover_label and hover_label.get_hovered_tag_index(mouse_pos, false) != -1:
-		target_node = last_highlighted
+	if display_manager and display_manager.has_method("get_selected_target_data"):
+		var data: Dictionary = display_manager.get_selected_target_data()
+		if data.has("node") and data["node"] != null:
+			target_node = data["node"]
+			target_pos = data.get("pos", grid_pos)
 
-	# 2. Priority 1: Occupant (GridBody2D / Prop / Entity / Player)
 	if not target_node:
-		var occ: Node2D = Grid.get_occupant(grid_pos)
-		if occ:
-			var occ_tags: Array = occ.tags.duplicate() if occ.get("tags") != null else []
-			if TagRegistry.has_renderable_tags(occ_tags):
-				target_node = occ
+		var candidates = SpriteHitDetector.get_candidates_at_position(mouse_pos)
+		if not candidates.is_empty():
+			target_node = candidates[0]["node"]
+			target_pos = candidates[0]["pos"]
+		else:
+			target_node = last_highlighted
 
-
-	# 3. Priority 2: SubtextRegion (Carpet / Furniture / Zone)
-	if not target_node:
-		var layer_name: String = str(target_layer.name) if target_layer else ""
-		var region: Node2D = Grid.get_region_at(grid_pos, layer_name)
-		if region and region.has_method("is_pixel_opaque") and region.is_pixel_opaque(mouse_pos):
-			target_node = region
-
-	# 4. Priority 3: Base TileMapLayer (Floor / Wall)
-	if not target_node and target_layer:
-		if target_layer.get("tags") != null or not Grid.get_cell_tags(grid_pos, target_layer.name).is_empty():
-			target_node = target_layer
-
-	if target_node and (target_node != drag_source_node or grid_pos != drag_source_pos):
+	if target_node and (target_node != drag_source_node or target_pos != drag_source_pos):
 		var target_idx: int = hover_label.get_hovered_tag_index(mouse_pos, false) if hover_label else -1
 		if target_idx == -1:
 			target_idx = 0
-		perform_swap(drag_source_node, drag_source_pos, drag_index, target_node, grid_pos, target_idx, hover_label)
+		perform_swap(drag_source_node, drag_source_pos, drag_index, target_node, target_pos, target_idx, hover_label)
 
 	cancel(hover_label)
 

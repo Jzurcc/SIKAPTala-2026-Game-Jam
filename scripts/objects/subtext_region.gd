@@ -199,8 +199,7 @@ func _setup_highlight_sprites() -> void:
 
 
 func is_pixel_opaque(world_pos: Vector2) -> bool:
-	var g_pos: Vector2i = Grid.world_to_grid(world_pos)
-	return get_grid_rect().has_point(g_pos)
+	return SpriteHitDetector.is_node_pixel_opaque(self, world_pos)
 
 
 func _exit_tree() -> void:

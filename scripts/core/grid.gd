@@ -175,6 +175,9 @@ func set_cell_tag_override(pos: Vector2i, layer_name: String, tags_list: Array) 
 
 
 func refresh_all_tags() -> void:
+	if GameState.solid_tilemaps.is_empty():
+		GameState.refresh_tilemaps()
+
 	wall_tags.clear()
 	layer_tags.clear()
 
@@ -190,13 +193,12 @@ func refresh_all_tags() -> void:
 	for region: Node2D in regions:
 		if is_instance_valid(region):
 			var rect: Rect2i = region.get_grid_rect()
+			var eff_layer: String = region.get_effective_layer_name() if region.has_method("get_effective_layer_name") else "Region"
 			for x in range(rect.size.x):
 				for y in range(rect.size.y):
 					var pos: Vector2i = rect.position + Vector2i(x, y)
-					for l: TileMapLayer in GameState.solid_tilemaps:
-						clear_layer_tags(pos, l.name)
 					for tag in region.tags:
-						add_wall_tag(pos, tag)
+						add_layer_tag(pos, eff_layer, tag)
 
 	# PASS 3: Cell tag overrides (pure spatial overrides from tag swaps)
 	for pos: Vector2i in cell_tag_overrides:

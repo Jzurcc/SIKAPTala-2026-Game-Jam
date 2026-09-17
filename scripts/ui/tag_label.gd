@@ -63,8 +63,9 @@ static func get_badge_texture() -> Texture2D:
 	return _cached_badge_tex
 
 var current_tags: Array = []
+var layer_indicator: RichTextLabel = null
 
-func setup(tags: Array) -> void:
+func setup(tags: Array, layer_info: String = "") -> void:
 	if not container: await ready
 	current_tags = tags
 	
@@ -75,6 +76,23 @@ func setup(tags: Array) -> void:
 	_hover_scales.clear()
 	_target_positions.clear()
 	_base_widths.clear()
+
+	if layer_info != "":
+		layer_indicator = RichTextLabel.new()
+		layer_indicator.bbcode_enabled = true
+		layer_indicator.fit_content = true
+		layer_indicator.autowrap_mode = TextServer.AUTOWRAP_OFF
+		layer_indicator.clip_contents = false
+		layer_indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var font: Font = load(font_path)
+		if font: layer_indicator.add_theme_font_override("normal_font", font)
+		layer_indicator.add_theme_font_size_override("normal_font_size", 4)
+		layer_indicator.add_theme_constant_override("outline_size", 2)
+		layer_indicator.add_theme_color_override("outline_color", Color.BLACK)
+		layer_indicator.text = "[center][color=#cccccc]" + layer_info + "[/color][/center]"
+		layer_indicator.position = Vector2(-30, -9)
+		layer_indicator.size = Vector2(60, 8)
+		container.add_child(layer_indicator)
 
 	var badge_tex: Texture2D = get_badge_texture()
 

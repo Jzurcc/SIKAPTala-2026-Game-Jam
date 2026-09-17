@@ -1,19 +1,25 @@
 extends Node
 
-## Manages hover detection, tag display, and substrate highlight orchestration.
-## Enforces clean Top-Layer Precedence: Occupant -> SubtextRegion -> TileMapLayer.
+## Manages pixel-perfect hover detection, tag display, and substrate highlight orchestration.
+## Dynamically evaluates sprite image sizes, alpha transparency, and allows cycling through
+## overlapping layers/objects (e.g. selecting a floor tile underneath a carpet).
 
 const DragControllerScript = preload("res://scripts/ui/drag_controller.gd")
 
 var hover_label: TagLabel
 var current_tags: Array = []
 var last_highlighted: Node2D = null
+var last_highlighted_pos: Vector2i = Vector2i.ZERO
 var tile_highlight_sprite: Sprite2D
 var highlight_container: Node2D
 var label_container: CanvasLayer
 
 var is_selected: bool = false
 var _target_world_pos: Vector2 = Vector2.ZERO
+
+var _candidates: Array[Dictionary] = []
+var _selected_candidate_idx: int = 0
+var _last_grid_pos: Vector2i = Vector2i(-9999, -9999)
 
 var drag: DragController
 
@@ -50,6 +56,8 @@ func _on_swap_completed() -> void:
 	_deselect()
 	_clear_highlight()
 	current_tags = []
+	_candidates.clear()
+	_selected_candidate_idx = 0
 
 
 func _input(event: InputEvent) -> void:
@@ -62,15 +70,80 @@ func _input(event: InputEvent) -> void:
 		_deselect()
 		return
 
-	if event is InputEventMouseButton:
-		var current_sc: Node = get_tree().current_scene
-		var mouse_pos: Vector2 = (current_sc as Node2D).get_global_mouse_position() if current_sc is Node2D else Vector2.ZERO
-
-		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+	# Candidate layer cycling via mouse wheel, right click, or Tab
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			if _cycle_candidate(-1):
+				get_viewport().set_input_as_handled()
+				return
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			if _cycle_candidate(1):
+				get_viewport().set_input_as_handled()
+				return
+		elif event.button_index == MOUSE_BUTTON_RIGHT and not drag.is_dragging:
+			if _cycle_candidate(1):
+				get_viewport().set_input_as_handled()
+				return
+		elif event.button_index == MOUSE_BUTTON_LEFT:
 			if drag.is_dragging:
+				var current_sc: Node = get_tree().current_scene
+				var mouse_pos: Vector2 = (current_sc as Node2D).get_global_mouse_position() if current_sc is Node2D else Vector2.ZERO
 				drag.handle_drop(mouse_pos, hover_label, last_highlighted, self)
 				get_viewport().set_input_as_handled()
 				return
+
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_TAB:
+			if _cycle_candidate(1):
+				get_viewport().set_input_as_handled()
+				return
+
+
+func _cycle_candidate(step: int) -> bool:
+	if _candidates.size() <= 1:
+		return false
+
+	_selected_candidate_idx = (_selected_candidate_idx + step) % _candidates.size()
+	if _selected_candidate_idx < 0:
+		_selected_candidate_idx += _candidates.size()
+
+	GameState.play_select_sfx()
+	_apply_current_candidate()
+	return true
+
+
+func _apply_current_candidate() -> void:
+	if _candidates.is_empty():
+		return
+
+	var idx: int = _selected_candidate_idx % _candidates.size()
+	var cand: Dictionary = _candidates[idx]
+
+	var cand_node: Node2D = cand["node"]
+	var cand_pos: Vector2i = cand["pos"]
+	var cand_tags: Array = cand["tags"]
+	var cand_target_world_pos: Vector2 = cand["target_world_pos"]
+	var cand_type: String = cand["type"]
+
+	last_highlighted_pos = cand_pos
+
+	if cand_type == "tile":
+		_highlight_layer_tile(cand_node as TileMapLayer, cand_pos)
+		last_highlighted = cand_node
+	else:
+		tile_highlight_sprite.visible = false
+		_set_highlight(cand_node)
+
+	_target_world_pos = cand_target_world_pos
+
+	var info_str: String = ""
+	if _candidates.size() > 1:
+		var name_label: String = str(cand.get("name", ""))
+		info_str = "%s [%d/%d] ↕" % [name_label.capitalize(), idx + 1, _candidates.size()]
+
+	current_tags = cand_tags
+	hover_label.setup(cand_tags, info_str)
+	_select()
 
 
 func _on_tag_drag_started(tag: Variant, index: int) -> void:
@@ -79,7 +152,7 @@ func _on_tag_drag_started(tag: Variant, index: int) -> void:
 
 	var current_sc: Node = get_tree().current_scene
 	var m_pos: Vector2 = (current_sc as Node2D).get_global_mouse_position() if current_sc is Node2D else Vector2.ZERO
-	var source_pos: Vector2i = Grid.world_to_grid(m_pos)
+	var source_pos: Vector2i = last_highlighted_pos
 	var player_pos: Vector2i = GameState.player_ref.grid_pos if GameState.player_ref else Vector2i.ZERO
 
 	var context: Dictionary = {
@@ -100,7 +173,6 @@ func _on_tag_drag_started(tag: Variant, index: int) -> void:
 
 func _select() -> void:
 	is_selected = true
-	tile_highlight_sprite.visible = false
 	if hover_label.has_method("set_selected"):
 		hover_label.set_selected(true)
 
@@ -120,6 +192,8 @@ func _process(delta: float) -> void:
 		tile_highlight_sprite.visible = false
 		hover_label.modulate.a = 0.0
 		current_tags = []
+		_candidates.clear()
+		_selected_candidate_idx = 0
 		return
 
 	if drag.is_dragging:
@@ -132,100 +206,52 @@ func _process(delta: float) -> void:
 		return
 
 	var mouse_pos: Vector2 = (scene as Node2D).get_global_mouse_position()
+	var grid_pos: Vector2i = Grid.world_to_grid(mouse_pos)
 
-	var tags: Array = []
-	var has_content: bool = false
 	var is_locked: bool = false
 
-	# Generous lock-on area: keep target active while mouse is over the target, label, or intermediate area
+	# Check lock-on area: keep target active while mouse is over target, label, or intermediate area
 	if is_selected and is_instance_valid(last_highlighted):
-		var target_bounds: Rect2
-		if last_highlighted.has_method("get_bounding_rect"):
-			target_bounds = last_highlighted.get_bounding_rect()
-		elif last_highlighted is SubtextRegion:
-			var r_rect: Rect2i = last_highlighted.get_grid_rect()
-			target_bounds = Rect2(Vector2(r_rect.position * Grid.TILE_SIZE), Vector2(r_rect.size * Grid.TILE_SIZE))
-		elif last_highlighted is TileMapLayer:
-			var g_pos: Vector2i = Grid.world_to_grid(_target_world_pos)
-			target_bounds = Rect2(Vector2(g_pos * Grid.TILE_SIZE), Vector2(Grid.TILE_SIZE, Grid.TILE_SIZE))
-		else:
-			target_bounds = Rect2(last_highlighted.global_position - Vector2(8, 8), Vector2(16, 16))
-
+		var target_bounds: Rect2 = SpriteHitDetector.get_visual_bounding_rect(last_highlighted, last_highlighted_pos)
 		var label_bounds: Rect2 = hover_label.get_total_label_rect()
 		var combined_zone: Rect2 = target_bounds.merge(label_bounds).grow(4.0)
 
 		if combined_zone.has_point(mouse_pos):
 			is_locked = true
 
-	if is_locked:
-		tags = current_tags.duplicate()
-		has_content = true
-	else:
-		var grid_pos: Vector2i = Grid.world_to_grid(mouse_pos)
-		var occupant: Node2D = Grid.get_occupant(grid_pos)
-		var top_layer: TileMapLayer = get_hovered_tile_layer(mouse_pos, true)
-		if top_layer == null:
-			top_layer = get_hovered_tile_layer(mouse_pos, false)
+	if not is_locked:
+		var new_candidates: Array[Dictionary] = SpriteHitDetector.get_candidates_at_position(mouse_pos)
 
-		var layer_name: String = str(top_layer.name) if top_layer else ""
-		var region: Node2D = Grid.get_region_at(grid_pos, layer_name)
-		if region != null and region.has_method("is_pixel_opaque") and not region.is_pixel_opaque(mouse_pos):
-			region = null
-
-		# Top-Layer Precedence Hierarchy:
-		# 1. Occupant (GridBody2D / Prop / Entity / Player)
-		var occ_tags: Array = occupant.tags.duplicate() if (occupant and occupant.get("tags") != null) else []
-		if occupant and TagRegistry.has_renderable_tags(occ_tags):
-			_set_highlight(occupant)
-			tile_highlight_sprite.visible = false
-			tags = occ_tags
-			if occupant.has_method("get_display_top_world_pos"):
-				_target_world_pos = occupant.get_display_top_world_pos()
-			else:
-				_target_world_pos = occupant.global_position
-			has_content = true
-		# 2. SubtextRegion (Carpet / Furniture / Zone)
-		elif region != null and TagRegistry.has_renderable_tags(region.tags):
-			tags = region.tags.duplicate()
-			_target_world_pos = region.get_center_world_pos() if region.has_method("get_center_world_pos") else region.global_position
-			has_content = true
-			tile_highlight_sprite.visible = false
-			_set_highlight(region)
-		# 3. Base TileMapLayer (Floor / Wall)
-		elif top_layer != null:
-			var l_tags: Array = Grid.get_cell_tags(grid_pos, top_layer.name)
-			if not l_tags.is_empty() and TagRegistry.has_renderable_tags(l_tags):
-				tags = l_tags
-				_target_world_pos = Grid.grid_to_world(grid_pos)
-				if last_highlighted != top_layer:
-					_clear_highlight()
-					last_highlighted = top_layer
-				_highlight_layer_tile(top_layer, grid_pos)
-				has_content = true
-			else:
-				tile_highlight_sprite.visible = false
-				_clear_highlight()
-		else:
-			tile_highlight_sprite.visible = false
+		if new_candidates.is_empty():
+			if is_selected:
+				_deselect()
 			_clear_highlight()
+			tile_highlight_sprite.visible = false
+			_candidates.clear()
+			_selected_candidate_idx = 0
+		else:
+			var candidate_changed: bool = (new_candidates.size() != _candidates.size() or grid_pos != _last_grid_pos)
+			if not candidate_changed and not _candidates.is_empty():
+				# Check if the node at index 0 changed
+				if new_candidates[0]["node"] != _candidates[0]["node"]:
+					candidate_changed = true
 
+			_candidates = new_candidates
+			_last_grid_pos = grid_pos
 
-	if has_content and not tags.is_empty():
-		if not is_selected:
-			_select()
-		if tags != current_tags:
-			current_tags = tags
-			hover_label.setup(tags)
+			if candidate_changed:
+				_selected_candidate_idx = 0
+				_apply_current_candidate()
 
+	# Update visual position and opacity of hover label
+	if is_selected and not current_tags.is_empty():
 		hover_label.holding_tag = drag.drag_tag if drag.is_dragging else ""
-		if drag.is_dragging and last_highlighted == drag.drag_source_node:
+		if drag.is_dragging and last_highlighted == drag.drag_source_node and last_highlighted_pos == drag.drag_source_pos:
 			hover_label.remove_tag_visual(drag.drag_index)
 
 		hover_label.global_position = hover_label.global_position.lerp(_target_world_pos, 0.15)
 		hover_label.modulate.a = lerpf(hover_label.modulate.a, 1.0, 0.2)
 	else:
-		if is_selected:
-			_deselect()
 		hover_label.modulate.a = lerpf(hover_label.modulate.a, 0.0, 0.3)
 		if hover_label.modulate.a < 0.05:
 			current_tags = []
@@ -242,25 +268,16 @@ func _update_pulsating_highlight(_delta: float) -> void:
 		last_highlighted.modulate.a = alpha
 
 
-func get_hovered_tile_layer(mouse_pos: Vector2, check_tags: bool = false) -> TileMapLayer:
-	var grid_pos: Vector2i = Grid.world_to_grid(mouse_pos)
-	for i in range(GameState.solid_tilemaps.size() - 1, -1, -1):
-		var layer: TileMapLayer = GameState.solid_tilemaps[i]
-		if is_instance_valid(layer) and layer.get_cell_source_id(grid_pos) != -1:
-			if check_tags:
-				if not Grid.get_cell_tags(grid_pos, layer.name).is_empty() or Grid.get_region_at(grid_pos, layer.name) != null:
-					return layer
-			else:
-				return layer
-	return null
-
-
 func _highlight_layer_tile(layer: TileMapLayer, pos: Vector2i) -> void:
+	if not is_instance_valid(layer) or not layer.tile_set:
+		tile_highlight_sprite.visible = false
+		return
+
 	var source_id: int = layer.get_cell_source_id(pos)
 	if source_id != -1:
 		var atlas_coords: Vector2i = layer.get_cell_atlas_coords(pos)
 		var source: TileSetAtlasSource = layer.tile_set.get_source(source_id) as TileSetAtlasSource
-		if source:
+		if source and source.texture:
 			tile_highlight_sprite.texture = source.texture
 			tile_highlight_sprite.region_rect = source.get_tile_texture_region(atlas_coords)
 			tile_highlight_sprite.global_position = Grid.grid_to_world(pos)
@@ -288,5 +305,16 @@ func _clear_highlight() -> void:
 			last_highlighted.set_highlighted(false)
 		last_highlighted.modulate = Color.WHITE
 
+	tile_highlight_sprite.visible = false
 	tile_highlight_sprite.modulate.a = 0.6
 	last_highlighted = null
+
+
+func get_selected_target_data() -> Dictionary:
+	if _candidates.is_empty():
+		return {
+			"node": last_highlighted,
+			"pos": last_highlighted_pos
+		}
+	var idx: int = _selected_candidate_idx % _candidates.size()
+	return _candidates[idx]
