@@ -7,8 +7,8 @@
 [ext_resource type="Script" uid="uid://ugyx3l3d66u2" path="res://scripts/objects/subtext_region.gd" id="6_rurhu"]
 [ext_resource type="Script" uid="uid://dlkcii48b0n8h" path="res://scripts/objects/camera_zone.gd" id="7_kk2rg"]
 [ext_resource type="Script" uid="uid://bw2muqrhk82u2" path="res://scripts/objects/level_exit.gd" id="8_b5spy"]
-[ext_resource type="PackedScene" uid="uid://cf83e9q278yua" path="res://scenes/props/bed.tscn" id="9_bed"]
-[ext_resource type="PackedScene" uid="uid://df72k4e891ypa" path="res://scenes/props/bookshelf.tscn" id="10_shelf"]
+[ext_resource type="PackedScene" uid="uid://cf83faq278yua" path="res://scenes/props/bed.tscn" id="9_bed"]
+[ext_resource type="PackedScene" uid="uid://df72k4faa1ypa" path="res://scenes/props/bookshelf.tscn" id="10_shelf"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_b5spy"]
 size = Vector2(112, 48)
@@ -27,7 +27,6 @@ tile_set = ExtResource("1_ycayy")
 tile_map_data = PackedByteArray("AAAIAAYAAAAFAAoAAAAJAAYAAAAFAAoAAAAKAAYAAAAFAAoAAAALAAYAAAAFAAoAAAAMAAYAAAAFAAoAAAANAAYAAAAFAAoAAAAJAAIAAAAEAAwAAAAIAAIAAAAEAAwAAAAKAAIAAAAEAAkAAAALAAIAAAAEAAwAAAAMAAIAAAAEAAwAAAANAAIAAAAEAAwAAAAHAAIAAAAEAAkAAAAOAAYAAAAHAAoAAAAOAAUAAAADAAoAAAAOAAQAAAADAAoAAAAOAAIAAAAEAAoAAAAOAAMAAAADAAoAAAAHAAYAAAAFAAoAAAAGAAYAAAAGAAoAAAAGAAUAAAAGAAkAAAAGAAQAAAAGAAkAAAAGAAMAAAAGAAkAAAAGAAIAAAAIAAkAAAA=")
 tile_set = ExtResource("1_ycayy")
 script = ExtResource("2_rurhu")
-initial_tags = [0]
 id = "wall"
 custom_dialogues = Array[String](["It's just a wall...", "A boring wall.", "I'm talking to a wall..."])
 
@@ -35,12 +34,12 @@ custom_dialogues = Array[String](["It's just a wall...", "A boring wall.", "I'm 
 tile_map_data = PackedByteArray("AAAIAAQAAAABAAkAAAAIAAUAAAABAAkAAAAJAAQAAAABAAkAAAAJAAUAAAABAAkAAAAKAAQAAAABAAkAAAAKAAUAAAABAAkAAAALAAQAAAABAAkAAAALAAUAAAABAAkAAAAMAAQAAAABAAkAAAAMAAUAAAABAAkAAAANAAQAAAABAAkAAAANAAUAAAABAAkAAAAHAAQAAAABAAkAAAAHAAUAAAABAAkAAAAHAAMAAAABAAkAAAAIAAMAAAABAAkAAAAJAAMAAAABAAkAAAAKAAMAAAABAAkAAAALAAMAAAABAAkAAAAMAAMAAAABAAkAAAANAAMAAAABAAkAAAA=")
 tile_set = ExtResource("1_ycayy")
 script = ExtResource("2_rurhu")
-initial_tags = [2]
+initial_tags = Array[int]([2])
 id = "ground"
 custom_dialogues = Array[String](["It's just the ground...", "I can walk there.", "What did I expect? A floor."])
 
 [node name="Furniture" type="TileMapLayer" parent="." unique_id=1275368969]
-tile_map_data = PackedByteArray("AAAMAAYAAAAOAAwAAAAJAAYAAAAOAA0AAAANAAMAAAAtACMAAAAMAAMAAAAsACMAAAALAAUAAAArACUAAAAMAAUAAAAsACUAAAANAAUAAAAtACUAAAALAAMAAAArACMAAAALAAQAAAArACQAAAAMAAQAAAAsACQAAAANAAQAAAAtACQAAAAHAAIA//////////8HAAMA//////////8IAAIA//////////8IAAMA//////////8JAAIA//////////8JAAMA//////////8=")
+tile_map_data = PackedByteArray("AAAMAAYAAAAOAAwAAAAJAAYAAAAOAA0AAAANAAMAAAAtACMAAAAMAAMAAAAsACMAAAALAAUAAAArACUAAAAMAAUAAAAsACUAAAANAAUAAAAtACUAAAALAAMAAAArACMAAAALAAQAAAArACQAAAAMAAQAAAAsACQAAAANAAQAAAAtACQAAAA=")
 tile_set = ExtResource("1_ycayy")
 
 [node name="Carpet" type="Node2D" parent="Furniture" unique_id=1206541273]
@@ -56,7 +55,7 @@ metadata/_custom_type_script = "uid://ugyx3l3d66u2"
 [node name="Furtniture2" type="TileMapLayer" parent="." unique_id=736190419]
 tile_set = ExtResource("1_ycayy")
 
-[node name="Player" type="CharacterBody2D" parent="." unique_id=299729164 instance=ExtResource("2_bw6k5")]
+[node name="Player" parent="." unique_id=299729164 instance=ExtResource("2_bw6k5")]
 position = Vector2(168, 72)
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=350922790]
@@ -85,8 +84,12 @@ next_scene = "res://scenes/level_2.tscn"
 position = Vector2(172, 68)
 shape = SubResource("RectangleShape2D_utbpp")
 
-[node name="Bed" type="Node2D" parent="." unique_id=451884381 instance=ExtResource("9_bed")]
-position = Vector2(120, 40)
+[node name="Bed" parent="." unique_id=451884381 instance=ExtResource("9_bed")]
+z_index = 1
+y_sort_enabled = true
+position = Vector2(120, 56)
 
-[node name="Bookshelf" type="Node2D" parent="." unique_id=301477062 instance=ExtResource("10_shelf")]
-position = Vector2(152, 40)
+[node name="Bookshelf" parent="." unique_id=301477062 instance=ExtResource("10_shelf")]
+z_index = 1
+y_sort_enabled = true
+position = Vector2(152, 56)

@@ -80,8 +80,7 @@ func _update_visuals() -> void:
 			)
 			sprite.region_rect = rect
 			sprite.centered = false
-			var y_offset: float = float(atlas_size.y - 1) * float(Grid.TILE_SIZE)
-			sprite.position = Vector2(-float(Grid.TILE_SIZE) / 2.0, -float(Grid.TILE_SIZE) / 2.0 - y_offset)
+			sprite.position = Vector2(-float(Grid.TILE_SIZE) / 2.0, -float(Grid.TILE_SIZE) / 2.0)
 	else:
 		sprite.region_enabled = false
 

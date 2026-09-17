@@ -22,7 +22,7 @@ func _ready() -> void:
 	y_sort_enabled = true
 	z_index = 1
 	grid_pos = Grid.world_to_grid(position)
-	position = get_base_world_pos()
+	position = Grid.grid_to_world(grid_pos)
 	_occupy_cells()
 	GameState.register_object(self)
 	if has_tag("YOU"):
@@ -255,8 +255,7 @@ func get_bounding_rect() -> Rect2:
 
 
 func get_base_world_pos() -> Vector2:
-	var base_cell: Vector2i = Vector2i(grid_pos.x, grid_pos.y + grid_size.y - 1)
-	return Grid.grid_to_world(base_cell)
+	return Grid.grid_to_world(grid_pos)
 
 
 func get_occupied_cells() -> Array[Vector2i]:
