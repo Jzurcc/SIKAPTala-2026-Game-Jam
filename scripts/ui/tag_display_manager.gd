@@ -4,10 +4,10 @@ extends Node
 ## and substrate highlight orchestration.
 ##
 ## Interaction Model:
-## 1. Hover (Unfocused): Highlights the object/tile underneath the cursor. Tags remain hidden.
+## 1. Hover (Unfocused): Highlights the object/tile underneath the cursor with a glow. Tags remain hidden.
 ## 2. Left Click on Target: Focuses on that target and reveals its tags with a pop animation. Focus is locked.
 ## 3. Left Click on Tag: Begins dragging that tag.
-## 4. Left Click Outside: Unfocuses and hides tags (or switches focus if clicking another object).
+## 4. Left Click Anything Else: Strictly unfocuses the current target and hides tags.
 ## 5. Mouse Wheel: Cycles layers under cursor (when unfocused) or on focused object.
 ## 6. ESC / Right-Click: Cancels drag if dragging; unfocuses if focused.
 
@@ -111,20 +111,16 @@ func _input(event: InputEvent) -> void:
 					get_viewport().set_input_as_handled()
 					return
 
-				# If clicked outside the tag label area
-				if not hover_label.is_mouse_over_label_area(mouse_pos):
-					_unfocus()
-					# If clicking directly on another candidate, focus it immediately
-					var new_cands: Array[Dictionary] = SpriteHitDetector.get_candidates_at_position(mouse_pos)
-					if not new_cands.is_empty():
-						_candidates = new_cands
-						_selected_candidate_idx = 0
-						_focus_current_candidate()
-					get_viewport().set_input_as_handled()
-					return
+				# If clicked anything other than the tag badge, unfocus current object
+				_unfocus()
+				get_viewport().set_input_as_handled()
+				return
 			else:
 				# Not focused: clicking on a candidate focuses it and reveals its tags
-				if not _candidates.is_empty():
+				var click_cands: Array[Dictionary] = SpriteHitDetector.get_candidates_at_position(mouse_pos)
+				if not click_cands.is_empty():
+					_candidates = click_cands
+					_selected_candidate_idx = 0
 					_focus_current_candidate()
 					get_viewport().set_input_as_handled()
 					return
@@ -142,6 +138,8 @@ func _focus_current_candidate() -> void:
 
 
 func _unfocus() -> void:
+	if is_focused:
+		GameState.play_deselect_sfx()
 	is_focused = false
 	if hover_label:
 		hover_label.hide_tags()
@@ -167,7 +165,6 @@ func _cycle_candidate(step: int) -> bool:
 		last_highlighted_pos = cand["pos"]
 		if cand["type"] == "tile":
 			_highlight_layer_tile(cand["node"] as TileMapLayer, cand["pos"])
-			last_highlighted = cand["node"]
 		else:
 			tile_highlight_sprite.visible = false
 			_set_highlight(cand["node"])
@@ -186,7 +183,6 @@ func _apply_candidate(cand: Dictionary, idx: int) -> void:
 
 	if cand_type == "tile":
 		_highlight_layer_tile(cand_node as TileMapLayer, cand_pos)
-		last_highlighted = cand_node
 	else:
 		tile_highlight_sprite.visible = false
 		_set_highlight(cand_node)
@@ -262,8 +258,6 @@ func _process(delta: float) -> void:
 			var cand: Dictionary = drop_candidates[idx]
 			if cand["type"] == "tile":
 				_highlight_layer_tile(cand["node"] as TileMapLayer, cand["pos"])
-				last_highlighted = cand["node"]
-				last_highlighted_pos = cand["pos"]
 			else:
 				tile_highlight_sprite.visible = false
 				_set_highlight(cand["node"])
@@ -305,7 +299,6 @@ func _process(delta: float) -> void:
 			last_highlighted_pos = cand["pos"]
 			if cand["type"] == "tile":
 				_highlight_layer_tile(cand["node"] as TileMapLayer, cand["pos"])
-				last_highlighted = cand["node"]
 			else:
 				tile_highlight_sprite.visible = false
 				_set_highlight(cand["node"])
@@ -313,16 +306,24 @@ func _process(delta: float) -> void:
 
 func _update_pulsating_highlight(_delta: float) -> void:
 	var p: float = (sin(Time.get_ticks_msec() * 0.012) + 1.0) / 2.0
-	var alpha: float = lerpf(0.3, 0.8, p)
+	var alpha: float = lerpf(0.4, 0.9, p)
 
 	if tile_highlight_sprite.visible:
 		tile_highlight_sprite.modulate.a = alpha
 
-	if is_instance_valid(last_highlighted) and not last_highlighted is TileMapLayer:
-		last_highlighted.modulate.a = alpha
+	# For objects / props: pulsating brightness tint without touching alpha (stays 1.0 opaque!)
+	if is_instance_valid(last_highlighted) and not last_highlighted is TileMapLayer and not last_highlighted is SubtextRegion:
+		var boost: float = lerpf(1.15, 1.45, p)
+		last_highlighted.modulate = Color(boost, boost, boost * 1.15, 1.0)
 
 
 func _highlight_layer_tile(layer: TileMapLayer, pos: Vector2i) -> void:
+	if last_highlighted != layer:
+		_clear_highlight()
+		last_highlighted = layer
+
+	last_highlighted_pos = pos
+
 	if not is_instance_valid(layer) or not layer.tile_set:
 		tile_highlight_sprite.visible = false
 		return
@@ -347,20 +348,22 @@ func _set_highlight(node: Node2D) -> void:
 		return
 	_clear_highlight()
 	last_highlighted = node
+	if not is_instance_valid(node):
+		return
 	if node.has_method("set_highlighted"):
 		node.set_highlighted(true)
-	else:
-		node.modulate = Color(1.2, 1.2, 1.5, 1.0)
+	elif not node is TileMapLayer:
+		node.modulate = Color(1.3, 1.3, 1.5, 1.0)
 
 
 func _clear_highlight() -> void:
 	if is_instance_valid(last_highlighted):
 		if last_highlighted.has_method("set_highlighted"):
 			last_highlighted.set_highlighted(false)
-		last_highlighted.modulate = Color.WHITE
+		elif not last_highlighted is TileMapLayer:
+			last_highlighted.modulate = Color.WHITE
 
 	tile_highlight_sprite.visible = false
-	tile_highlight_sprite.modulate.a = 0.6
 	last_highlighted = null
 
 

@@ -26,8 +26,10 @@ var _prompt_tween: Tween
 
 
 func start() -> void:
-	if GameState.tutorial_completed:
-		return
+	# Disabled for debugging
+	return
+	# if GameState.tutorial_completed:
+	# 	return
 
 	await get_tree().create_timer(4.0).timeout
 

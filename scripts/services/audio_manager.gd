@@ -42,10 +42,12 @@ func _ready() -> void:
 
 
 func start_gameplay_music() -> void:
-	if bgm_player.playing:
-		return
-	bgm_index = 0
-	_play_current_bgm()
+	# Disabled for debugging
+	return
+	# if bgm_player.playing:
+	# 	return
+	# bgm_index = 0
+	# _play_current_bgm()
 
 
 func play_select_sfx() -> void:

@@ -82,16 +82,19 @@ var current_tags: Array = []
 var layer_indicator: RichTextLabel = null
 
 func setup(tags: Array, layer_info: String = "") -> void:
-	if not container: await ready
+	if not container:
+		return
 	current_tags = tags
-	
+
 	for child in container.get_children():
 		child.queue_free()
-	
+
 	_labels.clear()
 	_hover_scales.clear()
 	_target_positions.clear()
 	_base_widths.clear()
+
+	var font: Font = load(font_path)
 
 	if layer_info != "":
 		layer_indicator = RichTextLabel.new()
@@ -100,8 +103,8 @@ func setup(tags: Array, layer_info: String = "") -> void:
 		layer_indicator.autowrap_mode = TextServer.AUTOWRAP_OFF
 		layer_indicator.clip_contents = false
 		layer_indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var font: Font = load(font_path)
-		if font: layer_indicator.add_theme_font_override("normal_font", font)
+		if font:
+			layer_indicator.add_theme_font_override("normal_font", font)
 		layer_indicator.add_theme_font_size_override("normal_font_size", 4)
 		layer_indicator.add_theme_constant_override("outline_size", 2)
 		layer_indicator.add_theme_color_override("outline_color", Color.BLACK)
@@ -130,15 +133,16 @@ func setup(tags: Array, layer_info: String = "") -> void:
 		label.autowrap_mode = TextServer.AUTOWRAP_OFF
 		label.clip_contents = false
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		
-		var font: Font = load(font_path)
-		if font: label.add_theme_font_override("normal_font", font)
+
+		if font:
+			label.add_theme_font_override("normal_font", font)
 		label.add_theme_font_size_override("normal_font_size", 5)
 		label.add_theme_constant_override("outline_size", 2)
 		label.add_theme_color_override("outline_color", Color.BLACK)
 
 		var color: String = tag_colors.get(tag_name, "#ffffff")
-		label.text = "[color=" + color + "][" + tag_name + "][/color]"
+		var tag_text_str: String = "[" + tag_name + "]"
+		label.text = "[color=" + color + "]" + tag_text_str + "[/color]"
 		tag_box.add_child(label)
 
 		# Add square property badge icons to the right of the tag text
@@ -155,20 +159,18 @@ func setup(tags: Array, layer_info: String = "") -> void:
 		container.add_child(tag_box)
 		tag_box.set_meta("tag", tag_name)
 		tag_box.set_meta("tag_data", tag)
-		
+
+		var text_w: float = font.get_string_size(tag_text_str, HORIZONTAL_ALIGNMENT_LEFT, -1, 5).x if font else float(tag_text_str.length() * 5)
+		var box_w: float = text_w + float(properties.size() * 8) + 2.0
+		tag_box.custom_minimum_size = Vector2(box_w, 10)
+		tag_box.size = Vector2(box_w, 10)
+		tag_box.pivot_offset = Vector2(box_w * 0.5, 5.0)
+		tag_box.gui_input.connect(_on_tag_gui_input.bind(tag_box))
+
 		_labels.append(tag_box)
 		_hover_scales.append(1.0)
 		_target_positions.append(0.0)
-		_base_widths.append(0.0)
-
-	await get_tree().process_frame
-	
-	for i in range(_labels.size()):
-		var tag_box = _labels[i]
-		if is_instance_valid(tag_box):
-			_base_widths[i] = tag_box.size.x
-			tag_box.pivot_offset = tag_box.size / 2.0
-			tag_box.gui_input.connect(_on_tag_gui_input.bind(tag_box))
+		_base_widths.append(box_w)
 
 func _process(_delta: float) -> void:
 	if _labels.is_empty(): return

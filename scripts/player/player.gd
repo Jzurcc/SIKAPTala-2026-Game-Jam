@@ -32,9 +32,9 @@ func _ready() -> void:
 	dialogue = DialogueBubble.new()
 	add_child(dialogue)
 
-	tutorial = TutorialController.new()
-	add_child(tutorial)
-	tutorial.start()
+	# tutorial = TutorialController.new()
+	# add_child(tutorial)
+	# tutorial.start()
 
 	if tags.is_empty():
 		var hidden_props: Array[String] = ["HIDDEN"]

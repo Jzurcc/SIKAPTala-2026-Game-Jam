@@ -84,12 +84,12 @@ func _ready() -> void:
 
 	next_glitch_time = randf_range(2.0, 5.0)
 	
-	bgm_player = AudioStreamPlayer.new()
-	bgm_player.stream = load("res://assets/music/bgm/a-lonely-cherry-tree-bo-2-dny.wav")
-	bgm_player.bus = "BGM"
-	bgm_player.autoplay = true
-	add_child(bgm_player)
-	bgm_player.finished.connect(bgm_player.play)
+	# bgm_player = AudioStreamPlayer.new()
+	# bgm_player.stream = load("res://assets/music/bgm/a-lonely-cherry-tree-bo-2-dny.wav")
+	# bgm_player.bus = "BGM"
+	# bgm_player.autoplay = true
+	# add_child(bgm_player)
+	# bgm_player.finished.connect(bgm_player.play)
 	
 	_update_title_text()
 
