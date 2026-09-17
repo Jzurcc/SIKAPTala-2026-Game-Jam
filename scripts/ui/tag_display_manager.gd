@@ -70,7 +70,7 @@ func _input(event: InputEvent) -> void:
 		_deselect()
 		return
 
-	# Candidate layer cycling via mouse wheel, right click, or Tab
+	# Candidate layer cycling via mouse wheel scroll only
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			if _cycle_candidate(-1):
@@ -80,21 +80,11 @@ func _input(event: InputEvent) -> void:
 			if _cycle_candidate(1):
 				get_viewport().set_input_as_handled()
 				return
-		elif event.button_index == MOUSE_BUTTON_RIGHT and not drag.is_dragging:
-			if _cycle_candidate(1):
-				get_viewport().set_input_as_handled()
-				return
 		elif event.button_index == MOUSE_BUTTON_LEFT:
 			if drag.is_dragging:
 				var current_sc: Node = get_tree().current_scene
 				var mouse_pos: Vector2 = (current_sc as Node2D).get_global_mouse_position() if current_sc is Node2D else Vector2.ZERO
 				drag.handle_drop(mouse_pos, hover_label, last_highlighted, self)
-				get_viewport().set_input_as_handled()
-				return
-
-	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_TAB:
-			if _cycle_candidate(1):
 				get_viewport().set_input_as_handled()
 				return
 
