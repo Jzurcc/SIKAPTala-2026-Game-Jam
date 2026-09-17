@@ -38,8 +38,24 @@ func _ready() -> void:
 	container = Control.new()
 	container.mouse_filter = Control.MOUSE_FILTER_PASS
 	add_child(container)
+	visible = false
 	modulate.a = 0.0
 	_add_float_animation()
+
+func show_tags(target_pos: Vector2) -> void:
+	visible = true
+	global_position = target_pos
+	modulate.a = 0.0
+	container.scale = Vector2(0.8, 0.8)
+	var tw: Tween = create_tween().set_parallel(true)
+	tw.tween_property(self, "modulate:a", 1.0, 0.15)
+	tw.tween_property(container, "scale", Vector2(1.2, 1.2), 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+func hide_tags() -> void:
+	var tw: Tween = create_tween().set_parallel(true)
+	tw.tween_property(self, "modulate:a", 0.0, 0.12)
+	tw.tween_property(container, "scale", Vector2(0.8, 0.8), 0.12)
+	tw.chain().tween_callback(func(): visible = false)
 
 func _add_float_animation() -> void:
 	var tween = container.create_tween().set_loops()

@@ -1,8 +1,15 @@
 extends Node
 
-## Manages pixel-perfect hover detection, tag display, and substrate highlight orchestration.
-## Dynamically evaluates sprite image sizes, alpha transparency, and allows cycling through
-## overlapping layers/objects (e.g. selecting a floor tile underneath a carpet).
+## Manages pixel-perfect hover detection, click-to-focus tag inspection,
+## and substrate highlight orchestration.
+##
+## Interaction Model:
+## 1. Hover (Unfocused): Highlights the object/tile underneath the cursor. Tags remain hidden.
+## 2. Left Click on Target: Focuses on that target and reveals its tags with a pop animation. Focus is locked.
+## 3. Left Click on Tag: Begins dragging that tag.
+## 4. Left Click Outside: Unfocuses and hides tags (or switches focus if clicking another object).
+## 5. Mouse Wheel: Cycles layers under cursor (when unfocused) or on focused object.
+## 6. ESC / Right-Click: Cancels drag if dragging; unfocuses if focused.
 
 const DragControllerScript = preload("res://scripts/ui/drag_controller.gd")
 
@@ -14,12 +21,11 @@ var tile_highlight_sprite: Sprite2D
 var highlight_container: Node2D
 var label_container: Node2D
 
-var is_selected: bool = false
+var is_focused: bool = false
 var _target_world_pos: Vector2 = Vector2.ZERO
 
 var _candidates: Array[Dictionary] = []
 var _selected_candidate_idx: int = 0
-var _last_grid_pos: Vector2i = Vector2i(-9999, -9999)
 
 var drag: DragController
 
@@ -48,12 +54,11 @@ func _ready() -> void:
 
 	hover_label = TagLabel.new()
 	label_container.add_child(hover_label)
-	hover_label.modulate.a = 0.0
 	hover_label.tag_drag_started.connect(_on_tag_drag_started)
 
 
 func _on_swap_completed() -> void:
-	_deselect()
+	_unfocus()
 	_clear_highlight()
 	current_tags = []
 	_candidates.clear()
@@ -64,13 +69,16 @@ func _input(event: InputEvent) -> void:
 	if not GameState.is_substrate:
 		return
 
+	var scene: Node = get_tree().current_scene
+	var mouse_pos: Vector2 = (scene as Node2D).get_global_mouse_position() if scene is Node2D else Vector2.ZERO
+
 	if event.is_action_pressed("ui_cancel"):
 		if drag.is_dragging:
 			drag.cancel(hover_label)
-		_deselect()
+		elif is_focused:
+			_unfocus()
 		return
 
-	# Candidate layer cycling via mouse wheel scroll only
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			if _cycle_candidate(-1):
@@ -80,13 +88,64 @@ func _input(event: InputEvent) -> void:
 			if _cycle_candidate(1):
 				get_viewport().set_input_as_handled()
 				return
+		elif event.button_index == MOUSE_BUTTON_RIGHT:
+			if drag.is_dragging:
+				drag.cancel(hover_label)
+				get_viewport().set_input_as_handled()
+				return
+			elif is_focused:
+				_unfocus()
+				get_viewport().set_input_as_handled()
+				return
 		elif event.button_index == MOUSE_BUTTON_LEFT:
 			if drag.is_dragging:
-				var current_sc: Node = get_tree().current_scene
-				var mouse_pos: Vector2 = (current_sc as Node2D).get_global_mouse_position() if current_sc is Node2D else Vector2.ZERO
 				drag.handle_drop(mouse_pos, hover_label, last_highlighted, self)
 				get_viewport().set_input_as_handled()
 				return
+
+			if is_focused:
+				# Check if clicking on a tag badge
+				var tag_idx: int = hover_label.get_hovered_tag_index(mouse_pos, false)
+				if tag_idx != -1 and tag_idx < current_tags.size():
+					_on_tag_drag_started(current_tags[tag_idx], tag_idx)
+					get_viewport().set_input_as_handled()
+					return
+
+				# If clicked outside the tag label area
+				if not hover_label.is_mouse_over_label_area(mouse_pos):
+					_unfocus()
+					# If clicking directly on another candidate, focus it immediately
+					var new_cands: Array[Dictionary] = SpriteHitDetector.get_candidates_at_position(mouse_pos)
+					if not new_cands.is_empty():
+						_candidates = new_cands
+						_selected_candidate_idx = 0
+						_focus_current_candidate()
+					get_viewport().set_input_as_handled()
+					return
+			else:
+				# Not focused: clicking on a candidate focuses it and reveals its tags
+				if not _candidates.is_empty():
+					_focus_current_candidate()
+					get_viewport().set_input_as_handled()
+					return
+
+
+func _focus_current_candidate() -> void:
+	if _candidates.is_empty():
+		return
+	is_focused = true
+	var idx: int = _selected_candidate_idx % _candidates.size()
+	var cand: Dictionary = _candidates[idx]
+	_apply_candidate(cand, idx)
+	hover_label.show_tags(_target_world_pos)
+	GameState.play_select_sfx()
+
+
+func _unfocus() -> void:
+	is_focused = false
+	if hover_label:
+		hover_label.hide_tags()
+	current_tags = []
 
 
 func _cycle_candidate(step: int) -> bool:
@@ -98,17 +157,25 @@ func _cycle_candidate(step: int) -> bool:
 		_selected_candidate_idx += _candidates.size()
 
 	GameState.play_select_sfx()
-	_apply_current_candidate()
-	return true
-
-
-func _apply_current_candidate() -> void:
-	if _candidates.is_empty():
-		return
 
 	var idx: int = _selected_candidate_idx % _candidates.size()
 	var cand: Dictionary = _candidates[idx]
 
+	if is_focused:
+		_apply_candidate(cand, idx)
+	else:
+		last_highlighted_pos = cand["pos"]
+		if cand["type"] == "tile":
+			_highlight_layer_tile(cand["node"] as TileMapLayer, cand["pos"])
+			last_highlighted = cand["node"]
+		else:
+			tile_highlight_sprite.visible = false
+			_set_highlight(cand["node"])
+
+	return true
+
+
+func _apply_candidate(cand: Dictionary, idx: int) -> void:
 	var cand_node: Node2D = cand["node"]
 	var cand_pos: Vector2i = cand["pos"]
 	var cand_tags: Array = cand["tags"]
@@ -133,11 +200,10 @@ func _apply_current_candidate() -> void:
 
 	current_tags = cand_tags
 	hover_label.setup(cand_tags, info_str)
-	_select()
 
 
 func _on_tag_drag_started(tag: Variant, index: int) -> void:
-	if last_highlighted == null:
+	if drag.is_dragging or last_highlighted == null:
 		return
 
 	var current_sc: Node = get_tree().current_scene
@@ -161,33 +227,24 @@ func _on_tag_drag_started(tag: Variant, index: int) -> void:
 	drag.begin_drag(tag, index, last_highlighted, source_pos, label_container, hover_label)
 
 
-func _select() -> void:
-	is_selected = true
-	if hover_label.has_method("set_selected"):
-		hover_label.set_selected(true)
-
-
-func _deselect() -> void:
-	is_selected = false
-	if hover_label.has_method("set_selected"):
-		hover_label.set_selected(false)
-
-
 func _process(delta: float) -> void:
 	if not GameState.is_substrate:
 		if drag.is_dragging:
 			drag.cancel(hover_label)
-		_deselect()
+		if is_focused:
+			_unfocus()
 		_clear_highlight()
 		tile_highlight_sprite.visible = false
-		hover_label.modulate.a = 0.0
+		if hover_label:
+			hover_label.visible = false
+			hover_label.modulate.a = 0.0
 		current_tags = []
 		_candidates.clear()
 		_selected_candidate_idx = 0
 		return
 
 	if drag.is_dragging:
-		drag.update_visual(delta, is_selected, hover_label)
+		drag.update_visual(delta, is_focused, hover_label)
 
 	_update_pulsating_highlight(delta)
 
@@ -197,20 +254,37 @@ func _process(delta: float) -> void:
 
 	var mouse_pos: Vector2 = (scene as Node2D).get_global_mouse_position()
 
-	# If currently dragging, keep the active target locked
-	var over_label: bool = is_selected and not current_tags.is_empty() and hover_label.is_mouse_over_label_area(mouse_pos)
+	if drag.is_dragging:
+		# Highlight target under mouse
+		var drop_candidates: Array[Dictionary] = SpriteHitDetector.get_candidates_at_position(mouse_pos)
+		if not drop_candidates.is_empty():
+			var idx: int = _selected_candidate_idx % drop_candidates.size()
+			var cand: Dictionary = drop_candidates[idx]
+			if cand["type"] == "tile":
+				_highlight_layer_tile(cand["node"] as TileMapLayer, cand["pos"])
+				last_highlighted = cand["node"]
+				last_highlighted_pos = cand["pos"]
+			else:
+				tile_highlight_sprite.visible = false
+				_set_highlight(cand["node"])
+				last_highlighted_pos = cand["pos"]
+		else:
+			_clear_highlight()
+		return
 
-	if not drag.is_dragging and not over_label:
+	if is_focused:
+		# Locked onto focused object
+		if not current_tags.is_empty() and hover_label.visible:
+			hover_label.global_position = hover_label.global_position.lerp(_target_world_pos, 0.25)
+	else:
+		# Unfocused: dynamically highlight hovered candidate, no tags shown
 		var new_candidates: Array[Dictionary] = SpriteHitDetector.get_candidates_at_position(mouse_pos)
 
 		if new_candidates.is_empty():
-			if is_selected:
-				_deselect()
 			_clear_highlight()
 			tile_highlight_sprite.visible = false
 			_candidates.clear()
 			_selected_candidate_idx = 0
-			current_tags = []
 		else:
 			var changed: bool = false
 			if new_candidates.size() != _candidates.size():
@@ -223,22 +297,18 @@ func _process(delta: float) -> void:
 
 			_candidates = new_candidates
 
-			if changed or not is_selected:
+			if changed:
 				_selected_candidate_idx = 0
-				_apply_current_candidate()
 
-	# Update visual position and opacity of hover label
-	if is_selected and not current_tags.is_empty():
-		hover_label.holding_tag = drag.drag_tag if drag.is_dragging else ""
-		if drag.is_dragging and last_highlighted == drag.drag_source_node and last_highlighted_pos == drag.drag_source_pos:
-			hover_label.remove_tag_visual(drag.drag_index)
-
-		hover_label.global_position = hover_label.global_position.lerp(_target_world_pos, 0.25)
-		hover_label.modulate.a = lerpf(hover_label.modulate.a, 1.0, 0.25)
-	else:
-		hover_label.modulate.a = lerpf(hover_label.modulate.a, 0.0, 0.35)
-		if hover_label.modulate.a < 0.05:
-			current_tags = []
+			var idx: int = _selected_candidate_idx % _candidates.size()
+			var cand: Dictionary = _candidates[idx]
+			last_highlighted_pos = cand["pos"]
+			if cand["type"] == "tile":
+				_highlight_layer_tile(cand["node"] as TileMapLayer, cand["pos"])
+				last_highlighted = cand["node"]
+			else:
+				tile_highlight_sprite.visible = false
+				_set_highlight(cand["node"])
 
 
 func _update_pulsating_highlight(_delta: float) -> void:
