@@ -32,17 +32,36 @@ func transition_to_scene(path: String, start_bgm: bool = false, fade_color: Colo
 	_transition_rect.color.a = 0.0
 
 	var tw := create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	tw.tween_property(_transition_rect, "color:a", 1.0, 0.8)
+	tw.tween_property(_transition_rect, "color:a", 1.0, 0.4)
 	await tw.finished
 
-	GameState.reset_state()
-	get_tree().change_scene_to_file(path)
-	await get_tree().create_timer(1.0, true).timeout
+	var actual_path: String = path
+	if actual_path.begins_with("uid://"):
+		var resolved: String = ResourceUID.get_id_path(ResourceUID.text_to_id(actual_path))
+		if resolved != "":
+			actual_path = resolved
+
+	var packed: PackedScene = null
+	if ResourceLoader.exists(actual_path):
+		packed = load(actual_path) as PackedScene
+
+	if packed != null:
+		GameState.reset_state()
+		var err := get_tree().change_scene_to_packed(packed)
+		if err != OK:
+			push_error("[SceneManager] ERROR: change_scene_to_packed failed with code: " + str(err))
+	else:
+		push_error("[SceneManager] ERROR: Could not load scene at path: " + str(path))
+		_transition_rect.color.a = 0.0
+		is_transitioning = false
+		return
+
+	await get_tree().create_timer(0.2, true).timeout
 
 	if start_bgm:
 		AudioManager.start_gameplay_music()
 
 	tw = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	tw.tween_property(_transition_rect, "color:a", 0.0, 0.8)
+	tw.tween_property(_transition_rect, "color:a", 0.0, 0.4)
 	await tw.finished
 	is_transitioning = false

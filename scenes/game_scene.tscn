@@ -79,7 +79,7 @@ shape = SubResource("RectangleShape2D_b5spy")
 [node name="Area2D2" type="Area2D" parent="." unique_id=828447437]
 visible = false
 script = ExtResource("8_b5spy")
-next_scene = "uid://bxki1nnwh8a8y"
+next_scene = "res://scenes/level_2.tscn"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D2" unique_id=1377353471]
 position = Vector2(172, 68)

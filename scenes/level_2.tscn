@@ -75,7 +75,7 @@ script = ExtResource("6_hey2k")
 visible = false
 position = Vector2(128, 48)
 script = ExtResource("7_y0kc7")
-next_scene = "uid://ciiq4w28nn2yg"
+next_scene = "res://scenes/level_3.tscn"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D2" unique_id=304537188]
 position = Vector2(172, 68)

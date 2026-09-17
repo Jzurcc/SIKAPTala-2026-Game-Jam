@@ -71,7 +71,7 @@ position = Vector2(136, 72)
 visible = false
 position = Vector2(24, 8)
 script = ExtResource("8_wae8j")
-next_scene = "uid://c10vq6moiw31d"
+next_scene = "res://scenes/win_screen.tscn"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D2" unique_id=1783779242]
 position = Vector2(172, 68)
