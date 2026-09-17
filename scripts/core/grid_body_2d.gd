@@ -25,6 +25,8 @@ func _ready() -> void:
 	position = get_base_world_pos()
 	_occupy_cells()
 	GameState.register_object(self)
+	if has_tag("YOU"):
+		TagRegistry.notify_tag_added(self, "YOU")
 	_on_ready()
 
 
@@ -47,7 +49,10 @@ func _vacate_cells() -> void:
 
 func _exit_tree() -> void:
 	_vacate_cells()
+	if has_tag("YOU"):
+		TagRegistry.notify_tag_removed(self, "YOU")
 	GameState.unregister_object(self)
+
 
 
 ## Queries TagRegistry to determine if this body can be pushed

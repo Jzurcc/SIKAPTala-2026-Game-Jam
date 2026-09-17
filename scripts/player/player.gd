@@ -7,7 +7,7 @@ extends CharacterBody2D
 const MOVE_DURATION := 0.18
 
 var grid_pos: Vector2i = Vector2i.ZERO
-var tags: Array[String] = []
+var tags: Array = []
 var is_dead: bool = false
 var is_moving: bool = false
 var facing_dir: Vector2i = Vector2i(0, 1)
@@ -36,8 +36,16 @@ func _ready() -> void:
 	add_child(tutorial)
 	tutorial.start()
 
+	if tags.is_empty():
+		var hidden_props: Array[String] = ["HIDDEN"]
+		tags = [SubtextTag.create("YOU", hidden_props)]
+	else:
+		if has_tag("YOU"):
+			TagRegistry.notify_tag_added(self, "YOU")
+
 	GameState.register_player(self)
 	_setup_selector()
+
 
 	grid_pos = Grid.world_to_grid(position)
 	position = Grid.grid_to_world(grid_pos)
@@ -108,7 +116,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	get_viewport().set_input_as_handled()
-	_attempt_move(dir)
+
+	var you_bodies: Array[Node2D] = GameState.get_you_bodies()
+	if you_bodies.is_empty():
+		return
+
+	if you_bodies.has(self):
+		_attempt_move(dir)
+	else:
+		var primary: Node2D = you_bodies[0]
+		if primary != null and is_instance_valid(primary):
+			GameState.step_turn(primary, dir)
+
 
 
 func _handle_dir_stack(event: InputEvent, action: String, dir: Vector2i) -> void:
@@ -252,3 +271,71 @@ func _die(death_delay: float = 0.8) -> void:
 	await tw.finished
 	GameState.reset_state()
 	get_tree().reload_current_scene()
+
+
+func get_tag_names() -> Array[String]:
+	var res: Array[String] = []
+	for t in tags:
+		if t is RefCounted and t.get("name") != null:
+			res.append(str(t.name))
+		else:
+			res.append(str(t))
+	return res
+
+
+func has_tag(tag_name: String) -> bool:
+	for t in tags:
+		if t is RefCounted and t.get("name") != null:
+			if str(t.name) == tag_name:
+				return true
+		elif str(t) == tag_name:
+			return true
+	return false
+
+
+func update_tags(new_tags: Array) -> void:
+	var old_tag_names: Array[String] = get_tag_names()
+	tags = new_tags.duplicate()
+	var new_tag_names: Array[String] = get_tag_names()
+	for t: String in old_tag_names:
+		if not t in new_tag_names:
+			TagRegistry.notify_tag_removed(self, t)
+	for t: String in new_tag_names:
+		if not t in old_tag_names:
+			TagRegistry.notify_tag_added(self, t)
+	Grid.refresh_all_tags()
+
+
+func add_tag(tag: Variant) -> bool:
+	var tag_name: String = tag.name if (tag is RefCounted and tag.get("name") != null) else str(tag)
+	if has_tag(tag_name):
+		return false
+	tags.append(tag)
+	TagRegistry.notify_tag_added(self, tag_name)
+	Grid.refresh_all_tags()
+	return true
+
+
+func remove_tag(tag_name: String) -> bool:
+	var found_idx: int = -1
+	for i in range(tags.size()):
+		var t = tags[i]
+		var t_name: String = t.name if (t is RefCounted and t.get("name") != null) else str(t)
+		if t_name == tag_name:
+			found_idx = i
+			break
+	if found_idx == -1:
+		return false
+	tags.remove_at(found_idx)
+	TagRegistry.notify_tag_removed(self, tag_name)
+	Grid.refresh_all_tags()
+	return true
+
+
+func get_bounding_rect() -> Rect2:
+	return Rect2(global_position - Vector2(8, 8), Vector2(16, 16))
+
+
+func get_display_top_world_pos() -> Vector2:
+	return global_position + Vector2(0, -12)
+

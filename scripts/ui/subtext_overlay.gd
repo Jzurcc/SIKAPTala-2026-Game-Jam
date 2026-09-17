@@ -27,7 +27,7 @@ func _ready() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("substrate_toggle"):
-		if GameState.player_ref == null:
+		if GameState.get_primary_player() == null:
 			return
 		GameState.toggle_substrate()
 		get_viewport().set_input_as_handled()
@@ -46,11 +46,13 @@ func _on_substrate_toggled(active: bool) -> void:
 	shader_mat.set_shader_parameter("aspect_ratio_expansion", aspect)
 
 	var center_uv = Vector2(0.5, 0.5)
-	if GameState.player_ref:
-		var screen_pos = GameState.player_ref.get_global_transform_with_canvas().origin
+	var primary = GameState.get_primary_player()
+	if primary:
+		var screen_pos = primary.get_global_transform_with_canvas().origin
 		center_uv = screen_pos / screen_size
 
 	shader_mat.set_shader_parameter("center", center_uv)
+
 
 	if active:
 		tween.tween_property(shader_mat, "shader_parameter/radius", 2.0, 0.4)

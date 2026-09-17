@@ -23,6 +23,7 @@ var tag_colors = {
 	"HARMFUL": "#ff0000",
 	"HIDDEN": "#333333",
 	"INTERACTABLE": "#44ffdd",
+	"YOU": "#ff66cc",
 }
 
 var _labels: Array[Control] = []

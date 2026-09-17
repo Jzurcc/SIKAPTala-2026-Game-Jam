@@ -152,11 +152,14 @@ func handle_drop(mouse_pos: Vector2, hover_label: TagLabel, last_highlighted: No
 	if hover_label and hover_label.get_hovered_tag_index(mouse_pos, false) != -1:
 		target_node = last_highlighted
 
-	# 2. Priority 1: Occupant (GridBody2D / Prop / Entity)
+	# 2. Priority 1: Occupant (GridBody2D / Prop / Entity / Player)
 	if not target_node:
 		var occ: Node2D = Grid.get_occupant(grid_pos)
-		if occ and occ != GameState.player_ref:
-			target_node = occ
+		if occ:
+			var occ_tags: Array = occ.tags.duplicate() if occ.get("tags") != null else []
+			if TagRegistry.has_renderable_tags(occ_tags):
+				target_node = occ
+
 
 	# 3. Priority 2: SubtextRegion (Carpet / Furniture / Zone)
 	if not target_node:

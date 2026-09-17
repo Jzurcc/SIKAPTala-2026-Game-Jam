@@ -12,10 +12,22 @@ func on_turn_tick(body: Node2D) -> void:
 	if "SLEEPING" in grid_body.tags:
 		return
 
-	if GameState.player_ref == null:
+	var you_bodies: Array[Node2D] = GameState.get_you_bodies()
+	if you_bodies.is_empty():
 		return
 
-	var player_pos: Vector2i = GameState.player_ref.grid_pos
+	var closest: Node2D = you_bodies[0]
+	var min_dist: float = (Vector2(closest.grid_pos) - Vector2(grid_body.grid_pos)).length_squared()
+	for i in range(1, you_bodies.size()):
+		var b: Node2D = you_bodies[i]
+		if is_instance_valid(b) and "grid_pos" in b:
+			var d: float = (Vector2(b.grid_pos) - Vector2(grid_body.grid_pos)).length_squared()
+			if d < min_dist:
+				min_dist = d
+				closest = b
+
+	var player_pos: Vector2i = closest.grid_pos
+
 	var diff: Vector2i = player_pos - grid_body.grid_pos
 	var dir: Vector2i = Vector2i.ZERO
 

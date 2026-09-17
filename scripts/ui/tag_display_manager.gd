@@ -173,19 +173,19 @@ func _process(delta: float) -> void:
 			region = null
 
 		# Top-Layer Precedence Hierarchy:
-		# 1. Occupant (GridBody2D / Prop / Entity)
-		if occupant and occupant != GameState.player_ref:
+		# 1. Occupant (GridBody2D / Prop / Entity / Player)
+		var occ_tags: Array = occupant.tags.duplicate() if (occupant and occupant.get("tags") != null) else []
+		if occupant and TagRegistry.has_renderable_tags(occ_tags):
 			_set_highlight(occupant)
 			tile_highlight_sprite.visible = false
-			if occupant.get("tags") != null:
-				tags = occupant.tags.duplicate()
+			tags = occ_tags
 			if occupant.has_method("get_display_top_world_pos"):
 				_target_world_pos = occupant.get_display_top_world_pos()
 			else:
 				_target_world_pos = occupant.global_position
 			has_content = true
 		# 2. SubtextRegion (Carpet / Furniture / Zone)
-		elif region != null:
+		elif region != null and TagRegistry.has_renderable_tags(region.tags):
 			tags = region.tags.duplicate()
 			_target_world_pos = region.get_center_world_pos() if region.has_method("get_center_world_pos") else region.global_position
 			has_content = true
@@ -193,9 +193,10 @@ func _process(delta: float) -> void:
 			_set_highlight(region)
 		# 3. Base TileMapLayer (Floor / Wall)
 		elif top_layer != null:
-			tags = Grid.get_cell_tags(grid_pos, top_layer.name)
-			_target_world_pos = Grid.grid_to_world(grid_pos)
-			if not tags.is_empty():
+			var l_tags: Array = Grid.get_cell_tags(grid_pos, top_layer.name)
+			if not l_tags.is_empty() and TagRegistry.has_renderable_tags(l_tags):
+				tags = l_tags
+				_target_world_pos = Grid.grid_to_world(grid_pos)
 				if last_highlighted != top_layer:
 					_clear_highlight()
 					last_highlighted = top_layer
@@ -207,6 +208,7 @@ func _process(delta: float) -> void:
 		else:
 			tile_highlight_sprite.visible = false
 			_clear_highlight()
+
 
 	if has_content and not tags.is_empty():
 		if not is_selected:

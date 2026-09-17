@@ -10,8 +10,9 @@ var _default_zoom: Vector2 = Vector2.ONE
 func _ready() -> void:
 	anchor_mode = Camera2D.ANCHOR_MODE_DRAG_CENTER
 	_default_zoom = zoom
-	if GameState.player_ref != null:
-		global_position = GameState.player_ref.position
+	var primary: Node2D = GameState.get_primary_player()
+	if primary != null:
+		global_position = primary.position
 	GameState.player_moved.connect(_on_player_moved)
 	GameState.player_died.connect(_on_player_died)
 
@@ -24,8 +25,10 @@ func enter_zone(zone: CameraZone) -> void:
 func exit_zone(zone: CameraZone) -> void:
 	if _current_zone == zone:
 		_current_zone = null
-		if GameState.player_ref:
-			_transition_to(GameState.player_ref.position, _default_zoom)
+		var primary: Node2D = GameState.get_primary_player()
+		if primary:
+			_transition_to(primary.position, _default_zoom)
+
 
 
 func _on_player_moved(world_pos: Vector2) -> void:

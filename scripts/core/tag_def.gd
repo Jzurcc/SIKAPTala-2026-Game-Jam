@@ -21,6 +21,7 @@ enum Tag {
 	PUSHING,
 	HARMFUL,
 	HIDDEN,
+	YOU,
 }
 
 ## Returns the string name of a Tag enum value (e.g. Tag.LIGHT -> "LIGHT").

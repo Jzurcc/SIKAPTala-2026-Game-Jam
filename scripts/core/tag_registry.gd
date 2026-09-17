@@ -16,6 +16,7 @@ const TagPatrolling = preload("res://scripts/tags/rules/tag_patrolling.gd")
 const TagFleeing = preload("res://scripts/tags/rules/tag_fleeing.gd")
 const TagSleeping = preload("res://scripts/tags/rules/tag_sleeping.gd")
 const TagHidden = preload("res://scripts/tags/rules/tag_hidden.gd")
+const TagYou = preload("res://scripts/tags/rules/tag_you.gd")
 
 # Property Rules
 const PropLocked = preload("res://scripts/tags/properties/prop_locked.gd")
@@ -57,6 +58,7 @@ static func _register_default_rules() -> void:
 	register_rule("FLEEING", TagFleeing.new())
 	register_rule("SLEEPING", TagSleeping.new())
 	register_rule("HIDDEN", TagHidden.new())
+	register_rule("YOU", TagYou.new())
 
 
 static func _register_default_property_rules() -> void:
@@ -244,6 +246,18 @@ static func can_render_tag(tag: Variant, context: Dictionary = {}) -> bool:
 		if rule != null and not rule.can_render(tag, context):
 			return false
 	return true
+
+
+## Returns true if at least one tag in the array can be rendered in Subtext view.
+static func has_renderable_tags(tags: Array, context: Dictionary = {}) -> bool:
+	_ensure_initialized()
+	if tags.is_empty():
+		return false
+	for tag in tags:
+		if can_render_tag(tag, context):
+			return true
+	return false
+
 
 
 ## Dispatches host physical contact to the property rules of all attached tags

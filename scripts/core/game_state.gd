@@ -11,6 +11,8 @@ signal level_won
 class UndoSnapshot:
 	var player_pos: Vector2i = Vector2i.ZERO
 	var has_player: bool = false
+	var player_tags: Array = []
+	var you_bodies: Array[Node2D] = []
 	var wall_tags: Dictionary = {}
 	var layer_tags: Dictionary = {}
 	var cell_tag_overrides: Dictionary = {}
@@ -26,6 +28,7 @@ var undo_stack: Array[UndoSnapshot] = []
 var _pending_death: Array[Node2D] = []
 
 var player_ref: Node2D = null
+var _you_bodies: Array[Node2D] = []
 var entities: Array[Node2D] = []
 var world_objects: Array[Node2D] = []
 var solid_tilemaps: Array[TileMapLayer] = []
@@ -56,13 +59,64 @@ func transition_to_scene(path: String, start_bgm: bool = false, fade_color: Colo
 var is_transitioning: bool:
 	get: return SceneManager.is_transitioning
 
-## --- Registration ---
+## --- Registration & YOU Identity ---
 
 func register_player(p: Node2D) -> void:
 	player_ref = p
 	if player_ref:
 		player_ref.z_index = 1
 		player_ref.y_sort_enabled = true
+		register_you_body(player_ref)
+
+
+func register_you_body(body: Node2D) -> void:
+	if body == null or not is_instance_valid(body):
+		return
+	if not _you_bodies.has(body):
+		_you_bodies.append(body)
+	if player_ref == null or not is_instance_valid(player_ref):
+		player_ref = body
+
+
+func unregister_you_body(body: Node2D) -> void:
+	_you_bodies.erase(body)
+	if player_ref == body:
+		player_ref = _you_bodies[0] if not _you_bodies.is_empty() else null
+
+
+func get_you_bodies() -> Array[Node2D]:
+	var active: Array[Node2D] = []
+	for b in _you_bodies:
+		if is_instance_valid(b) and (b.get("is_alive") == null or b.get("is_alive") == true) and (b.get("is_dead") == null or b.get("is_dead") == false):
+			active.append(b)
+	if player_ref and is_instance_valid(player_ref) and not active.has(player_ref):
+		if player_ref.has_method("has_tag") and player_ref.has_tag("YOU"):
+			active.append(player_ref)
+		elif player_ref.get("tags") != null and "YOU" in TagRegistry.extract_tag_names(player_ref.tags):
+			active.append(player_ref)
+	for obj in world_objects:
+		if is_instance_valid(obj) and not active.has(obj):
+			if obj.has_method("has_tag") and obj.has_tag("YOU"):
+				active.append(obj)
+			elif obj.get("tags") != null and "YOU" in TagRegistry.extract_tag_names(obj.tags):
+				active.append(obj)
+	for ent in entities:
+		if is_instance_valid(ent) and not active.has(ent):
+			if ent.has_method("has_tag") and ent.has_tag("YOU"):
+				active.append(ent)
+			elif ent.get("tags") != null and "YOU" in TagRegistry.extract_tag_names(ent.tags):
+				active.append(ent)
+	if active.is_empty() and player_ref != null and is_instance_valid(player_ref):
+		active.append(player_ref)
+	return active
+
+
+func get_primary_player() -> Node2D:
+	var bodies: Array[Node2D] = get_you_bodies()
+	if not bodies.is_empty():
+		return bodies[0]
+	return player_ref
+
 
 
 func register_entity(e: Node2D) -> void:
@@ -105,11 +159,13 @@ func _find_tilemaps_recursive(node: Node) -> void:
 func reset() -> void:
 	entities.clear()
 	world_objects.clear()
+	_you_bodies.clear()
 	undo_stack.clear()
 	player_ref = null
 	solid_tilemaps.clear()
 	is_substrate = false
 	Grid.clear()
+
 
 
 func toggle_substrate() -> void:
@@ -202,14 +258,21 @@ func step_turn(actor: Node2D, dir: Vector2i) -> bool:
 			process_turn()
 		return false
 
-	if actor == player_ref:
-		Grid.vacate(actor.grid_pos)
-		actor.grid_pos = res["target_pos"]
-		Grid.occupy(actor.grid_pos, actor)
-		player_moved.emit(actor.position)
+	Grid.vacate(actor.grid_pos)
+	actor.grid_pos = res["target_pos"]
+	Grid.occupy(actor.grid_pos, actor)
+	player_moved.emit(actor.position)
+
+	# Multi-avatar step: If there are other YOU bodies, step them in parallel
+	var you_bodies: Array[Node2D] = get_you_bodies()
+	for other in you_bodies:
+		if is_instance_valid(other) and other != actor:
+			if other.has_method("step"):
+				other.step(dir)
 
 	process_turn()
 	return true
+
 
 
 func process_turn() -> void:
@@ -237,6 +300,10 @@ func push_undo_state() -> void:
 	if player_ref:
 		snap.has_player = true
 		snap.player_pos = player_ref.grid_pos
+		if player_ref.get("tags") != null:
+			snap.player_tags = (player_ref.tags as Array).duplicate()
+	snap.you_bodies = _you_bodies.duplicate()
+
 
 	for k: Vector2i in Grid.wall_tags:
 		snap.wall_tags[k] = Grid.wall_tags[k].duplicate()
@@ -311,12 +378,16 @@ func pop_undo_state() -> void:
 
 	Grid.occupied.clear()
 
-	# 3. Restore player position
+	# 3. Restore player position & tags
 	if player_ref and snap.has_player:
 		player_ref.grid_pos = snap.player_pos
 		player_ref.position = Grid.grid_to_world(player_ref.grid_pos)
+		if not snap.player_tags.is_empty() and player_ref.get("tags") != null:
+			player_ref.tags = snap.player_tags.duplicate()
 		Grid.occupy(player_ref.grid_pos, player_ref)
 		player_moved.emit(player_ref.position)
+	_you_bodies = snap.you_bodies.duplicate()
+
 
 	# 4. Restore spatial cell tag overrides
 	Grid.cell_tag_overrides.clear()
@@ -388,7 +459,9 @@ func reset_state() -> void:
 	_flush_pending_death()
 	entities.clear()
 	world_objects.clear()
+	_you_bodies.clear()
 	undo_stack.clear()
 	Grid.clear()
 	player_ref = null
 	is_transitioning = false
+

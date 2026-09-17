@@ -36,10 +36,11 @@ func _check_win() -> void:
 
 
 func _check_exit() -> void:
-	if GameState.player_ref == null:
-		return
-	if GameState.player_ref.grid_pos == goal_grid_pos:
-		_win()
+	var bodies: Array[Node2D] = GameState.get_you_bodies()
+	for b in bodies:
+		if is_instance_valid(b) and "grid_pos" in b and b.grid_pos == goal_grid_pos:
+			_win()
+			return
 
 
 func _check_deliver() -> void:
@@ -63,14 +64,19 @@ func _check_defeat() -> void:
 
 
 func _check_protect() -> void:
-	if GameState.player_ref == null:
-		return
-	if GameState.player_ref.grid_pos != goal_grid_pos:
+	var bodies: Array[Node2D] = GameState.get_you_bodies()
+	var at_goal: bool = false
+	for b in bodies:
+		if is_instance_valid(b) and "grid_pos" in b and b.grid_pos == goal_grid_pos:
+			at_goal = true
+			break
+	if not at_goal:
 		return
 	for e in GameState.entities:
 		if is_instance_valid(e) and e.name == target_entity_name:
 			_win()
 			return
+
 
 
 func _check_shatter() -> void:

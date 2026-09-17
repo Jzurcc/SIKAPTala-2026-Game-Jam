@@ -22,9 +22,18 @@ func _trigger_exit(node: Node) -> void:
 	if node == null:
 		return
 
-	if node.name == "Player" or node.is_in_group("player"):
-		if node.get("is_dead") == true:
+	var is_player_node: bool = false
+	if node == GameState.player_ref or node.is_in_group("player") or node.name == "Player":
+		is_player_node = true
+	elif node in GameState.get_you_bodies():
+		is_player_node = true
+	elif node.has_method("has_tag") and node.has_tag("YOU"):
+		is_player_node = true
+
+	if is_player_node:
+		if node.get("is_dead") == true or node.get("is_alive") == false:
 			return
+
 
 		if next_scene != "":
 			var target_path: String = next_scene
